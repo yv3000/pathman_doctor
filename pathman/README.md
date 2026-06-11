@@ -9,9 +9,24 @@ Over time, the Windows PATH gets cluttered with dead folders (uninstalled softwa
 
 ## Installation
 
-1. Download `pathman.exe` from the [Releases](../../releases) page.
-2. Drop it into any folder that's already in your PATH (e.g., `C:\Windows\System32` or your preferred bin folder).
-3. Open a new terminal and type `pathman`.
+Paste this in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/yv3000/pathman/main/install.ps1 | iex
+```
+
+Restart your terminal, then use:
+
+```powershell
+pathman doctor
+pathman fix
+```
+
+## Uninstall
+
+```powershell
+pathman uninstall
+```
 
 ## Usage
 

@@ -20,6 +20,8 @@ func main() {
 		cmd.Doctor()
 	case "fix":
 		cmd.Fix()
+	case "uninstall":
+		cmd.Uninstall()
 	case "--version", "-v":
 		fmt.Printf("pathman v%s\n", version)
 	case "--help", "-h":
