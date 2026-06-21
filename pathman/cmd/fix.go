@@ -11,6 +11,26 @@ import (
 )
 
 func Fix() {
+	// Parse optional flags: --entry <path>, --only dead|dup
+	var entryFilter string
+	var onlyFilter string
+
+	args := os.Args[2:]
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--entry":
+			if i+1 < len(args) {
+				entryFilter = strings.TrimRight(args[i+1], `\/`)
+				i++
+			}
+		case "--only":
+			if i+1 < len(args) {
+				onlyFilter = strings.ToUpper(args[i+1])
+				i++
+			}
+		}
+	}
+
 	systemEntries, err := internal.ReadPATH("System")
 	if err != nil {
 		// proceed with what we have
@@ -28,7 +48,21 @@ func Fix() {
 	var cleanUser []string
 
 	for _, e := range entries {
-		if e.Status == "DEAD" || e.Status == "DUP" {
+		isIssue := e.Status == "DEAD" || e.Status == "DUP"
+
+		if isIssue && entryFilter != "" {
+			normalized := strings.TrimRight(e.Path, `\/`)
+			if !strings.EqualFold(normalized, entryFilter) {
+				isIssue = false
+			}
+		}
+		if isIssue && onlyFilter != "" {
+			if !strings.EqualFold(e.Status, onlyFilter) {
+				isIssue = false
+			}
+		}
+
+		if isIssue {
 			toRemove = append(toRemove, e)
 		} else {
 			if e.Scope == "System" {
@@ -75,7 +109,7 @@ func Fix() {
 			systemSuccess = true
 		}
 	} else {
-		systemSuccess = true // No changes needed
+		systemSuccess = true
 	}
 
 	if len(userEntries) > len(cleanUser) {
@@ -86,7 +120,7 @@ func Fix() {
 			userSuccess = true
 		}
 	} else {
-		userSuccess = true // No changes needed
+		userSuccess = true
 	}
 
 	if systemSuccess || userSuccess {
