@@ -17,7 +17,7 @@ func Uninstall() {
 		return
 	}
 
-	psScript := `irm https://raw.githubusercontent.com/yv3000/pathman/main/uninstall.ps1 | iex`
+	psScript := `irm https://raw.githubusercontent.com/yv3000/pathman_doctor/main/pathman/uninstall.ps1 | iex`
 	cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", psScript)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

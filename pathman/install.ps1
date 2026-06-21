@@ -19,7 +19,7 @@ try {
     }
 
     try {
-        $releaseUrl = "https://api.github.com/repos/yv3000/pathman/releases/latest"
+        $releaseUrl = "https://api.github.com/repos/yv3000/pathman_doctor/releases/latest"
         $release = Invoke-RestMethod -Uri $releaseUrl
         $version = $release.tag_name
         

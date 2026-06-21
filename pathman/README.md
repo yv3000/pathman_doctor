@@ -12,7 +12,7 @@ Over time, the Windows PATH gets cluttered with dead folders (uninstalled softwa
 Paste this in PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/yv3000/pathman/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/yv3000/pathman_doctor/main/pathman/install.ps1 | iex
 ```
 
 Restart your terminal, then use:
