@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
-	"github.com/yv3000/pathman/internal"
+	"github.com/yv3000/pathman_doctor/internal"
 )
 
 func Doctor() {

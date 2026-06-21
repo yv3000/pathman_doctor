@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/yv3000/pathman/internal"
+	"github.com/yv3000/pathman_doctor/internal"
 )
 
 func Fix() {
@@ -91,10 +91,8 @@ func Fix() {
 
 	if systemSuccess || userSuccess {
 		internal.BroadcastChange()
+		fmt.Printf("✅ Done. PATH cleaned. %d entries removed.\nNo restart required.\n", len(toRemove))
+	} else {
+		fmt.Println("❌ No changes applied. Check the errors above.")
 	}
-
-	// Always print this if they hit 'y' since we attempted to remove toRemove
-	// But actually if system write failed, we only removed user entries.
-	// We'll just stick to the prompt's requested output.
-	fmt.Printf("✅ Done. PATH cleaned. %d entries removed.\nNo restart required.\n", len(toRemove))
 }

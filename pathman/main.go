@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/yv3000/pathman/cmd"
+	"github.com/yv3000/pathman_doctor/cmd"
 )
 
 const version = "1.0.0"

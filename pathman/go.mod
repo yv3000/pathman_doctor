@@ -1,4 +1,4 @@
-module github.com/yv3000/pathman
+module github.com/yv3000/pathman_doctor
 
 go 1.21
 
