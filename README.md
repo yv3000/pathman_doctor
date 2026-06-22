@@ -1,4 +1,3 @@
-```markdown
 <p align="center">
   <a href="https://golang.org"><img src="https://img.shields.io/badge/built%20with-Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" /></a>
   <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" /></a>
@@ -32,7 +31,7 @@ Open **PowerShell** and run:
 
 ```powershell
 irm https://raw.githubusercontent.com/yv3000/pathman_doctor/main/install.ps1 | iex
-```
+
 
 That's it. **One command. No admin required.**
 
