@@ -31,7 +31,7 @@ Open **PowerShell** and run:
 
 ```powershell
 irm https://raw.githubusercontent.com/yv3000/pathman_doctor/main/install.ps1 | iex
-
+```
 
 That's it. **One command. No admin required.**
 
@@ -228,4 +228,3 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 <p align="center">
   <sub>YV 🖤 ~ I EXPECT NOTHING FROM YOU...</sub>
 </p>
-```
