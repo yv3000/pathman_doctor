@@ -79,7 +79,8 @@ pathman uninstall
 
 The command removes pathman's own User PATH entry (after saving a backup) and
 deletes `%USERPROFILE%\.pathman\bin`. It needs no network access and never
-touches your other PATH entries.
+touches your other PATH entries. Windows locks the running executable, so the
+folder itself is deleted a moment after the process exits.
 
 If the binary is already gone, run the script instead:
 

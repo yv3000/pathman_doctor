@@ -6,6 +6,14 @@ All notable changes to pathman are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-18
+
+### Fixed
+
+- `uninstall` now schedules the deletion of its own folder for when the process
+  exits. Windows locks the running executable, so the first live run removed the
+  PATH entry but could not delete the files.
+
 ## [1.2.0] - 2026-10-18
 
 ### Added

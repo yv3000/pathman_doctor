@@ -8,7 +8,7 @@ import (
 	"github.com/yv3000/pathman_doctor/internal"
 )
 
-var version = "1.2.0"
+var version = "1.2.1"
 
 func main() {
 	app := cmd.NewApp(internal.NewStore(), os.Stdin, os.Stdout, normalizeVersion(version))

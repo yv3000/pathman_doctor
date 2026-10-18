@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -14,6 +16,17 @@ func defaultExecutable() (string, error) {
 
 func defaultRemoveAll(path string) error {
 	return os.RemoveAll(path)
+}
+
+// defaultScheduleRemoval starts a detached shell that deletes dir once this
+// process has exited. Windows keeps a lock on the running executable, so the
+// install directory cannot be removed while pathman is still running.
+func defaultScheduleRemoval(dir string) error {
+	if strings.ContainsAny(dir, "\"&|<>^%") {
+		return fmt.Errorf("path %q cannot be passed to the shell safely", dir)
+	}
+	command := exec.Command("cmd.exe", "/c", fmt.Sprintf("ping -n 3 127.0.0.1 >nul & rmdir /s /q \"%s\"", dir))
+	return command.Start()
 }
 
 func (a App) runUninstall(args []string) int {
@@ -83,9 +96,12 @@ func (a App) runUninstall(args []string) int {
 	}
 
 	if err := a.RemoveAll(installDir); err != nil {
-		a.warnf("Could not delete %s: %v", installDir, err)
-		a.printf("Close the running pathman process and delete the folder manually.")
-		return ExitOK
+		if serr := a.ScheduleRemoval(installDir); serr != nil {
+			a.warnf("Could not delete %s: %v", installDir, err)
+			a.printf("Close the running pathman process and delete the folder manually.")
+			return ExitOK
+		}
+		a.printf("This process is still running, so %s will be deleted when it exits.", installDir)
 	}
 
 	a.successf("pathman uninstalled.")

@@ -76,6 +76,7 @@ func newTestApp(t *testing.T, store internal.Store, input string) (App, *bytes.B
 	out := &bytes.Buffer{}
 	app := NewApp(store, strings.NewReader(input), out, "9.9.9")
 	app.BackupDir = t.TempDir()
+	app.ScheduleRemoval = func(string) error { return nil }
 	return app, out
 }
 
