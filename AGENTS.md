@@ -81,6 +81,19 @@ usage. `main` is the only place that calls `os.Exit`.
   `ci:`, `docs:`, `chore:`).
 - Build artifacts are ignored (`*.exe`). Do not commit binaries.
 
+## Testing notes that are not obvious from the code
+
+- `uninstall` schedules a detached `cmd /c ping ... & rmdir` cleanup because
+  Windows locks the running executable. An agent sandbox that kills the whole
+  process tree when a command finishes also kills that child, so verify the
+  deletion by running the same `cmd /c` string directly.
+- When a shell command must contain `>nul`, write it from Go code or a file:
+  passing it through this agent shell rewrites it to `/dev/null`, which cmd
+  treats as an invalid redirect.
+- Live registry checks are allowed on this machine, but only against a
+  throwaway entry created for the test, with the User PATH copied to a file
+  first (`--entry` keeps every other entry untouched).
+
 ## Releasing
 
 Push a `vX.Y.Z` tag. The release workflow tests the module, builds AMD64 and

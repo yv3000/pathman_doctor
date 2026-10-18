@@ -88,6 +88,8 @@ detectable and it is not the behaviour the score is meant to reward.
       tests and publishes both binaries).
 - [x] Enable branch protection for `main`: the `Build, vet and test`, `Lint`
       and `Vulnerability scan` checks are required.
+- [x] End-to-end run on a real machine: registry write with `--entry`
+      filters, uninstall and installer (see the verification table).
 - [ ] Re-run the datafactor audit after the release.
 - [ ] Replace the `@latest` govulncheck install in CI with a pinned version
       once a version that supports the runner's Go is chosen.
@@ -113,11 +115,11 @@ detectable and it is not the behaviour the score is meant to reward.
 | Remote CI | GitHub Actions run 39101743236 | build/vet/test, lint and vulncheck all pass |
 | Branch protection | GitHub API | required checks configured on `main` |
 | Dependency PRs | Dependabot #1–#5 | rebased, green, merged |
-| Release pipeline | tag `v1.2.0` | tests ran, amd64/arm64 assets uploaded, `--version` reports the tag |
+| Release pipeline | tags `v1.2.0`, `v1.2.1`, `v1.2.2` | tests ran, amd64/arm64 assets uploaded, `--version` reports the tag |
 | Live registry write | `fix --only dup/dead --entry <temp entry>` | both filters removed only the test entry; 66 existing entries unchanged; backups written |
 | Live uninstall | `pathman uninstall` on the installed binary | PATH entry removed with backup; the locked folder exposed a defect fixed in v1.2.1 |
 | Deferred cleanup | same command string run directly with `cmd /c` | deletes the folder; the agent sandbox kills detached children, so the scheduled run is verified by unit tests plus the direct invocation |
-| Installer | `install.ps1` via `irm \| iex` | downloads the release asset, installs and updates PATH |
+| Installer | `install.ps1` via `irm \| iex` | downloaded v1.2.2 to `~\.pathman\bin`, added the User PATH entry, binary reports `pathman v1.2.2` |
 
 Coverage percentages are from the last local run; CI records them on every push.
 
