@@ -101,28 +101,38 @@ func (a App) runFix(args []string) int {
 		return ExitOK
 	}
 
-	systemOK := true
-	userOK := true
+	removed := 0
+	failed := make([]string, 0, 2)
 
 	if plan.RemovedIn(internal.ScopeSystem) > 0 {
 		if err := a.Store.WritePATH(internal.ScopeSystem, plan.System); err != nil {
 			a.warnf("System PATH requires admin rights. Run as Administrator to fix System entries.")
-			systemOK = false
+			failed = append(failed, "System")
+		} else {
+			removed += plan.RemovedIn(internal.ScopeSystem)
 		}
 	}
 
 	if plan.RemovedIn(internal.ScopeUser) > 0 {
 		if err := a.Store.WritePATH(internal.ScopeUser, plan.User); err != nil {
 			a.errorf("Failed to write User PATH: %v", err)
-			userOK = false
+			failed = append(failed, "User")
+		} else {
+			removed += plan.RemovedIn(internal.ScopeUser)
 		}
 	}
 
-	if systemOK || userOK {
+	if len(failed) == 0 {
 		a.Store.Broadcast()
-		a.printf("✅ Done. PATH cleaned. %d entries removed.", len(plan.Remove))
+		a.successf("PATH cleaned. %d entries removed.", removed)
 		a.printf("No restart required.")
 		return ExitOK
+	}
+
+	if removed > 0 {
+		a.Store.Broadcast()
+		a.warnf("Removed %d entries, but the %s PATH was left unchanged.", removed, strings.Join(failed, " and "))
+		return ExitFailure
 	}
 
 	a.errorf("No changes applied. Check the errors above.")

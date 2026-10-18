@@ -250,6 +250,48 @@ func TestFixOnlyDuplicateKeepsDeadEntries(t *testing.T) {
 	}
 }
 
+func TestFixReportsPartialWriteFailure(t *testing.T) {
+	dir := t.TempDir()
+	systemMissing := filepath.Join(dir, "system-missing")
+	userMissing := filepath.Join(dir, "user-missing")
+
+	store := newFakeStore()
+	store.system = []string{systemMissing}
+	store.user = []string{userMissing}
+	store.writeErr[internal.ScopeSystem] = errors.New("access denied")
+	app, out := newTestApp(store, "y\n")
+
+	if code := app.Run([]string{"fix"}); code != ExitFailure {
+		t.Fatalf("exit = %d, want %d", code, ExitFailure)
+	}
+	if _, ok := store.writes[internal.ScopeUser]; !ok {
+		t.Fatalf("user PATH should still be cleaned: %#v", store.writes)
+	}
+	if store.broadcasts != 1 {
+		t.Fatalf("broadcasts = %d, want 1", store.broadcasts)
+	}
+	if !strings.Contains(out.String(), "System PATH was left unchanged") {
+		t.Fatalf("output = %q", out.String())
+	}
+}
+
+func TestFixReportsUserWriteFailure(t *testing.T) {
+	store := newFakeStore()
+	store.user = []string{filepath.Join(t.TempDir(), "missing")}
+	store.writeErr[internal.ScopeUser] = errors.New("access denied")
+	app, out := newTestApp(store, "y\n")
+
+	if code := app.Run([]string{"fix"}); code != ExitFailure {
+		t.Fatalf("exit = %d, want %d", code, ExitFailure)
+	}
+	if !strings.Contains(out.String(), "Failed to write User PATH") {
+		t.Fatalf("output = %q", out.String())
+	}
+	if !strings.Contains(out.String(), "No changes applied") {
+		t.Fatalf("output = %q", out.String())
+	}
+}
+
 func TestFixEntryFilterTargetsOnePath(t *testing.T) {
 	dir := t.TempDir()
 	first := filepath.Join(dir, "first")
