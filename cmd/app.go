@@ -32,16 +32,21 @@ type App struct {
 
 	// BackupDir is where PATH is snapshotted before a write.
 	BackupDir string
+	// Executable and RemoveAll are seams for uninstall.
+	Executable func() (string, error)
+	RemoveAll  func(string) error
 }
 
 // NewApp builds the production application.
 func NewApp(store internal.Store, in io.Reader, out io.Writer, version string) App {
 	return App{
-		Store:     store,
-		In:        in,
-		Out:       out,
-		Version:   version,
-		BackupDir: internal.DefaultBackupDir(),
+		Store:      store,
+		In:         in,
+		Out:        out,
+		Version:    version,
+		BackupDir:  internal.DefaultBackupDir(),
+		Executable: defaultExecutable,
+		RemoveAll:  defaultRemoveAll,
 	}
 }
 
