@@ -29,15 +29,19 @@ type App struct {
 	In      io.Reader
 	Out     io.Writer
 	Version string
+
+	// BackupDir is where PATH is snapshotted before a write.
+	BackupDir string
 }
 
 // NewApp builds the production application.
 func NewApp(store internal.Store, in io.Reader, out io.Writer, version string) App {
 	return App{
-		Store:   store,
-		In:      in,
-		Out:     out,
-		Version: version,
+		Store:     store,
+		In:        in,
+		Out:       out,
+		Version:   version,
+		BackupDir: internal.DefaultBackupDir(),
 	}
 }
 

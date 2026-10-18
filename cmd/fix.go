@@ -101,6 +101,15 @@ func (a App) runFix(args []string) int {
 		return ExitOK
 	}
 
+	backups, err := a.saveBackups(plan)
+	if err != nil {
+		a.errorf("Could not back up PATH, no changes made: %v", err)
+		return ExitFailure
+	}
+	if len(backups) > 0 {
+		a.printf("Backup: %s", strings.Join(backups, ", "))
+	}
+
 	removed := 0
 	failed := make([]string, 0, 2)
 
@@ -137,4 +146,23 @@ func (a App) runFix(args []string) int {
 
 	a.errorf("No changes applied. Check the errors above.")
 	return ExitFailure
+}
+
+func (a App) saveBackups(plan internal.Plan) ([]string, error) {
+	var paths []string
+	for _, scope := range []internal.Scope{internal.ScopeSystem, internal.ScopeUser} {
+		if plan.RemovedIn(scope) == 0 {
+			continue
+		}
+		raw, err := a.Store.ReadRaw(scope)
+		if err != nil {
+			return nil, fmt.Errorf("read %s PATH: %w", scope, err)
+		}
+		path, err := internal.SaveBackup(a.BackupDir, scope, raw)
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, path)
+	}
+	return paths, nil
 }

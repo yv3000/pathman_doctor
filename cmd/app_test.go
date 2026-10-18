@@ -71,13 +71,16 @@ func (f *fakeStore) Broadcast() {
 	f.broadcasts++
 }
 
-func newTestApp(store internal.Store, input string) (App, *bytes.Buffer) {
+func newTestApp(t *testing.T, store internal.Store, input string) (App, *bytes.Buffer) {
+	t.Helper()
 	out := &bytes.Buffer{}
-	return NewApp(store, strings.NewReader(input), out, "9.9.9"), out
+	app := NewApp(store, strings.NewReader(input), out, "9.9.9")
+	app.BackupDir = t.TempDir()
+	return app, out
 }
 
 func TestRunHelpAndVersion(t *testing.T) {
-	app, out := newTestApp(newFakeStore(), "")
+	app, out := newTestApp(t, newFakeStore(), "")
 
 	if code := app.Run(nil); code != ExitOK {
 		t.Fatalf("no args exit = %d, want %d", code, ExitOK)
@@ -96,7 +99,7 @@ func TestRunHelpAndVersion(t *testing.T) {
 }
 
 func TestRunUnknownCommandIsUsageError(t *testing.T) {
-	app, out := newTestApp(newFakeStore(), "")
+	app, out := newTestApp(t, newFakeStore(), "")
 
 	if code := app.Run([]string{"bogus"}); code != ExitUsage {
 		t.Fatalf("exit = %d, want %d", code, ExitUsage)
@@ -113,7 +116,7 @@ func TestDoctorReportsIssues(t *testing.T) {
 	store := newFakeStore()
 	store.system = []string{dir}
 	store.user = []string{missing}
-	app, out := newTestApp(store, "")
+	app, out := newTestApp(t, store, "")
 
 	if code := app.Run([]string{"doctor"}); code != ExitOK {
 		t.Fatalf("exit = %d, want %d", code, ExitOK)
@@ -130,7 +133,7 @@ func TestDoctorWarnsWhenSystemPathIsUnreadable(t *testing.T) {
 	store := newFakeStore()
 	store.readErr[internal.ScopeSystem] = errors.New("access denied")
 	store.user = []string{filepath.Join(t.TempDir(), "missing")}
-	app, out := newTestApp(store, "")
+	app, out := newTestApp(t, store, "")
 
 	if code := app.Run([]string{"doctor"}); code != ExitOK {
 		t.Fatalf("exit = %d, want %d", code, ExitOK)
@@ -146,7 +149,7 @@ func TestFixWarnsWhenSystemPathIsUnreadable(t *testing.T) {
 	store := newFakeStore()
 	store.readErr[internal.ScopeSystem] = errors.New("access denied")
 	store.user = []string{missing}
-	app, out := newTestApp(store, "y\n")
+	app, out := newTestApp(t, store, "y\n")
 
 	if code := app.Run([]string{"fix"}); code != ExitOK {
 		t.Fatalf("exit = %d, want %d", code, ExitOK)
@@ -171,7 +174,7 @@ func TestFixFailsWhenBothScopesAreUnreadable(t *testing.T) {
 	store := newFakeStore()
 	store.readErr[internal.ScopeSystem] = errors.New("access denied")
 	store.readErr[internal.ScopeUser] = errors.New("access denied")
-	app, out := newTestApp(store, "y\n")
+	app, out := newTestApp(t, store, "y\n")
 
 	if code := app.Run([]string{"fix"}); code != ExitFailure {
 		t.Fatalf("exit = %d, want %d", code, ExitFailure)
@@ -187,7 +190,7 @@ func TestFixFailsWhenBothScopesAreUnreadable(t *testing.T) {
 func TestFixCancelDoesNotWrite(t *testing.T) {
 	store := newFakeStore()
 	store.user = []string{filepath.Join(t.TempDir(), "missing")}
-	app, out := newTestApp(store, "n\n")
+	app, out := newTestApp(t, store, "n\n")
 
 	if code := app.Run([]string{"fix"}); code != ExitOK {
 		t.Fatalf("exit = %d, want %d", code, ExitOK)
@@ -207,7 +210,7 @@ func TestFixRemovesDeadAndDuplicateEntries(t *testing.T) {
 	store := newFakeStore()
 	store.system = []string{dir}
 	store.user = []string{missing, dir}
-	app, out := newTestApp(store, "y\n")
+	app, out := newTestApp(t, store, "y\n")
 
 	if code := app.Run([]string{"fix"}); code != ExitOK {
 		t.Fatalf("exit = %d, want %d", code, ExitOK)
@@ -238,7 +241,7 @@ func TestFixOnlyDuplicateKeepsDeadEntries(t *testing.T) {
 	store := newFakeStore()
 	store.system = []string{dir}
 	store.user = []string{missing, dir}
-	app, _ := newTestApp(store, "y\n")
+	app, _ := newTestApp(t, store, "y\n")
 
 	if code := app.Run([]string{"fix", "--only", "dup"}); code != ExitOK {
 		t.Fatalf("exit = %d, want %d", code, ExitOK)
@@ -247,6 +250,59 @@ func TestFixOnlyDuplicateKeepsDeadEntries(t *testing.T) {
 	written := store.writes[internal.ScopeUser]
 	if len(written) != 1 || written[0] != missing {
 		t.Fatalf("user PATH = %#v, want %q", written, missing)
+	}
+}
+
+func TestFixWritesBackupBeforeChange(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing")
+	raw := `C:\Tools;` + missing
+
+	store := newFakeStore()
+	store.user = []string{missing}
+	store.raw[internal.ScopeUser] = raw
+	app, _ := newTestApp(t, store, "y\n")
+
+	if code := app.Run([]string{"fix"}); code != ExitOK {
+		t.Fatalf("exit = %d, want %d", code, ExitOK)
+	}
+
+	files, err := os.ReadDir(app.BackupDir)
+	if err != nil {
+		t.Fatalf("reading backup dir: %v", err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("backup files = %d, want 1", len(files))
+	}
+
+	content, err := os.ReadFile(filepath.Join(app.BackupDir, files[0].Name()))
+	if err != nil {
+		t.Fatalf("reading backup: %v", err)
+	}
+	if string(content) != raw {
+		t.Fatalf("backup = %q, want %q", string(content), raw)
+	}
+}
+
+func TestFixAbortsWhenBackupFails(t *testing.T) {
+	store := newFakeStore()
+	store.user = []string{filepath.Join(t.TempDir(), "missing")}
+
+	file := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(file, []byte("blocker"), 0o600); err != nil {
+		t.Fatalf("writing blocker file: %v", err)
+	}
+
+	app, out := newTestApp(t, store, "y\n")
+	app.BackupDir = file
+
+	if code := app.Run([]string{"fix"}); code != ExitFailure {
+		t.Fatalf("exit = %d, want %d", code, ExitFailure)
+	}
+	if len(store.writes) != 0 {
+		t.Fatalf("writes = %#v, want none", store.writes)
+	}
+	if !strings.Contains(out.String(), "Could not back up PATH") {
+		t.Fatalf("output = %q", out.String())
 	}
 }
 
@@ -259,7 +315,7 @@ func TestFixReportsPartialWriteFailure(t *testing.T) {
 	store.system = []string{systemMissing}
 	store.user = []string{userMissing}
 	store.writeErr[internal.ScopeSystem] = errors.New("access denied")
-	app, out := newTestApp(store, "y\n")
+	app, out := newTestApp(t, store, "y\n")
 
 	if code := app.Run([]string{"fix"}); code != ExitFailure {
 		t.Fatalf("exit = %d, want %d", code, ExitFailure)
@@ -279,7 +335,7 @@ func TestFixReportsUserWriteFailure(t *testing.T) {
 	store := newFakeStore()
 	store.user = []string{filepath.Join(t.TempDir(), "missing")}
 	store.writeErr[internal.ScopeUser] = errors.New("access denied")
-	app, out := newTestApp(store, "y\n")
+	app, out := newTestApp(t, store, "y\n")
 
 	if code := app.Run([]string{"fix"}); code != ExitFailure {
 		t.Fatalf("exit = %d, want %d", code, ExitFailure)
@@ -299,7 +355,7 @@ func TestFixEntryFilterTargetsOnePath(t *testing.T) {
 
 	store := newFakeStore()
 	store.user = []string{first, second}
-	app, _ := newTestApp(store, "y\n")
+	app, _ := newTestApp(t, store, "y\n")
 
 	if code := app.Run([]string{"fix", "--entry", second}); code != ExitOK {
 		t.Fatalf("exit = %d, want %d", code, ExitOK)
@@ -314,7 +370,7 @@ func TestFixEntryFilterTargetsOnePath(t *testing.T) {
 func TestFixRejectsInvalidOnlyValue(t *testing.T) {
 	store := newFakeStore()
 	store.user = []string{filepath.Join(t.TempDir(), "missing")}
-	app, out := newTestApp(store, "y\n")
+	app, out := newTestApp(t, store, "y\n")
 
 	if code := app.Run([]string{"fix", "--only", "bogus"}); code != ExitUsage {
 		t.Fatalf("exit = %d, want %d", code, ExitUsage)
@@ -341,7 +397,7 @@ func TestFixRejectsInvalidArguments(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			store := newFakeStore()
 			store.user = []string{filepath.Join(t.TempDir(), "missing")}
-			app, _ := newTestApp(store, "y\n")
+			app, _ := newTestApp(t, store, "y\n")
 
 			if code := app.Run(tt.args); code != ExitUsage {
 				t.Fatalf("exit = %d, want %d", code, ExitUsage)
@@ -356,7 +412,7 @@ func TestFixRejectsInvalidArguments(t *testing.T) {
 func TestFixHelpDoesNotTouchPATH(t *testing.T) {
 	store := newFakeStore()
 	store.user = []string{filepath.Join(t.TempDir(), "missing")}
-	app, out := newTestApp(store, "")
+	app, out := newTestApp(t, store, "")
 
 	if code := app.Run([]string{"fix", "--help"}); code != ExitOK {
 		t.Fatalf("exit = %d, want %d", code, ExitOK)
