@@ -6,6 +6,14 @@ All notable changes to pathman are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-18
+
+### Changed
+
+- The deferred uninstall cleanup now tries to break away from a hosting job
+  object before falling back to a plain detached process, so the folder is
+  removed in more environments (agent sandboxes, CI runners).
+
 ## [1.2.1] - 2026-10-18
 
 ### Fixed

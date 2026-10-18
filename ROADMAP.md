@@ -116,10 +116,14 @@ detectable and it is not the behaviour the score is meant to reward.
 | Release pipeline | tag `v1.2.0` | tests ran, amd64/arm64 assets uploaded, `--version` reports the tag |
 | Live registry write | `fix --only dup/dead --entry <temp entry>` | both filters removed only the test entry; 66 existing entries unchanged; backups written |
 | Live uninstall | `pathman uninstall` on the installed binary | PATH entry removed with backup; the locked folder exposed a defect fixed in v1.2.1 |
+| Deferred cleanup | same command string run directly with `cmd /c` | deletes the folder; the agent sandbox kills detached children, so the scheduled run is verified by unit tests plus the direct invocation |
+| Installer | `install.ps1` via `irm \| iex` | downloads the release asset, installs and updates PATH |
 
 Coverage percentages are from the last local run; CI records them on every push.
 
 Remote checks are now verified as well: CI passed on `main`, the three jobs are
-required by branch protection, and the release workflow published v1.2.0. The
-live uninstall run is what surfaced the locked-executable defect that v1.2.1
-fixes, so re-run it against the new release when convenient.
+required by branch protection, and the release workflow published v1.2.0 and
+v1.2.1. The live uninstall run surfaced the locked-executable defect that
+v1.2.1 fixes; the folder deletion itself could only be observed when the exact
+`cmd /c` command is run directly, because this agent sandbox terminates the
+whole process tree of a finished command, including a detached cleanup child.

@@ -6,6 +6,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
+
+	"golang.org/x/sys/windows"
 
 	"github.com/yv3000/pathman_doctor/internal"
 )
@@ -25,7 +28,23 @@ func defaultScheduleRemoval(dir string) error {
 	if strings.ContainsAny(dir, "\"&|<>^%") {
 		return fmt.Errorf("path %q cannot be passed to the shell safely", dir)
 	}
-	command := exec.Command("cmd.exe", "/c", fmt.Sprintf("ping -n 3 127.0.0.1 >nul & rmdir /s /q \"%s\"", dir))
+	script := fmt.Sprintf("ping -n 3 127.0.0.1 >nul & rmdir /s /q \"%s\"", dir)
+
+	// A breakaway process survives a job object that would otherwise kill the
+	// whole tree when pathman exits; restricted jobs reject the flag, so fall
+	// back to a plain detached process.
+	command := exec.Command("cmd.exe", "/c", script)
+	command.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS | windows.CREATE_BREAKAWAY_FROM_JOB,
+	}
+	if err := command.Start(); err == nil {
+		return nil
+	}
+
+	command = exec.Command("cmd.exe", "/c", script)
+	command.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS,
+	}
 	return command.Start()
 }
 
