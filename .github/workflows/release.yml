@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: windows-latest
@@ -16,18 +19,20 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version-file: go.mod
+          cache: true
+
+      - name: Test before release
+        run: go test ./...
 
       - name: Build amd64
-        working-directory: pathman
-        run: go build -ldflags="-s -w" -o ../pathman-windows-amd64.exe .
+        run: go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o pathman-windows-amd64.exe .
         env:
           GOOS: windows
           GOARCH: amd64
 
       - name: Build arm64
-        working-directory: pathman
-        run: go build -ldflags="-s -w" -o ../pathman-windows-arm64.exe .
+        run: go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o pathman-windows-arm64.exe .
         env:
           GOOS: windows
           GOARCH: arm64
