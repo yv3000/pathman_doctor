@@ -1,6 +1,7 @@
 <p align="center">
   <a href="https://golang.org"><img src="https://img.shields.io/badge/built%20with-Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" /></a>
   <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" /></a>
+  <a href="https://github.com/yv3000/pathman_doctor/actions/workflows/ci.yml"><img src="https://github.com/yv3000/pathman_doctor/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="#license"><img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License" /></a>
 </p>
 
@@ -49,13 +50,42 @@ pathman doctor   # scan your PATH for issues
 
 ---
 
+## Build from source
+
+Requires **Windows** and **Go 1.21 or newer**. No other tooling is needed.
+
+```powershell
+git clone https://github.com/yv3000/pathman_doctor
+cd pathman_doctor
+
+go build -o pathman.exe .
+go vet ./...
+go test ./... -cover
+
+.\pathman.exe doctor
+```
+
+`go test ./...` runs the whole suite against a fake registry store, so it never
+modifies your real PATH. The repository does not contain a prebuilt binary;
+release executables are produced by CI for every `v*` tag.
+
+---
+
 ## Uninstall
+
+```powershell
+pathman uninstall
+```
+
+The command removes pathman's own User PATH entry (after saving a backup) and
+deletes `%USERPROFILE%\.pathman\bin`. It needs no network access and never
+touches your other PATH entries.
+
+If the binary is already gone, run the script instead:
 
 ```powershell
 irm https://raw.githubusercontent.com/yv3000/pathman_doctor/main/uninstall.ps1 | iex
 ```
-
-This removes the `~\.pathman\` folder and cleans the entry from your User PATH — completely. Your original PATH entries are never modified by the uninstaller.
 
 ---
 
@@ -83,8 +113,23 @@ pathman fix --entry "C:\some\old\tool\bin"   # fix one specific path
 | `pathman fix --only dead` | Remove only entries pointing to missing folders |
 | `pathman fix --only dup` | Remove only duplicate entries (keeps first occurrence) |
 | `pathman fix --entry "C:\path"` | Fix all issues for one specific path only |
+| `pathman uninstall` | Remove pathman's files and its User PATH entry |
 | `pathman --version` | Show installed version |
 | `pathman --help` | Show usage |
+
+Every command validates its flags. An unknown flag, a missing `--entry` value
+or an invalid `--only` value prints the usage and changes nothing.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | All requested work succeeded |
+| `1` | Nothing changed, or only part of the work could be applied |
+| `2` | Invalid command or flags — PATH was not touched |
+
+`pathman fix` exits with `1` when, for example, it cleaned the User PATH but
+lacked Administrator rights for the System PATH.
 
 ---
 
@@ -107,6 +152,10 @@ Each entry gets one of three statuses:
 | `❌ DEAD` | Folder is missing — safe to remove |
 | `⚠️ DUP` | Same path already appeared earlier — safe to remove |
 
+`%VAR%` entries are resolved with your environment before they are checked, so
+`%SystemRoot%\system32` is verified as the real folder. A variable that is not
+set is never treated as safe to delete.
+
 ### The Fix Flow
 
 ```
@@ -120,6 +169,9 @@ Analyze: mark each entry as OK / DEAD / DUP
      |
      v
 Show issues + ask for confirmation (y/n)
+     |
+     v
+Back up the untouched PATH value
      |
      v
 Write cleaned PATH back to Registry
@@ -144,7 +196,7 @@ After fixing, pathman calls `SendMessageTimeout` with `WM_SETTINGCHANGE` — the
 | User PATH | No — works as a normal user |
 | System PATH | Yes — run PowerShell as Administrator |
 
-If you run `pathman fix` without admin and there are System PATH issues, pathman fixes User PATH and warns you about the System entries. To fix System PATH:
+If you run `pathman fix` without admin and there are System PATH issues, pathman fixes User PATH, warns you about the System entries, and exits with status `1` so the incomplete run is visible to scripts. To fix System PATH:
 
 ```powershell
 # Open PowerShell as Administrator, then:
@@ -168,7 +220,8 @@ pathman fix --entry "C:\some\broken\path"
 | **OS** | Windows 10 / Windows 11 |
 | **Architecture** | AMD64 or ARM64 |
 | **Admin** | Only for System PATH fixes (optional) |
-| **Dependencies** | None — single static binary |
+| **Go** | 1.21+ if you build from source |
+| **Dependencies** | None at runtime — single static binary |
 
 ---
 
@@ -180,8 +233,11 @@ No. pathman only modifies PATH entries in the Registry. It never touches files o
 **Can I preview what will be fixed before confirming?**
 Yes — `pathman fix` always shows every entry it will remove and asks `Apply these changes? (y/n)` before doing anything.
 
+**Does pathman keep a copy of my old PATH?**
+Yes. Before every write, `fix` and `uninstall` save the untouched registry value to `%LOCALAPPDATA%\pathman\backups\` and print the file path. To restore, copy that file's content back into PATH from System Properties. If the backup cannot be written, nothing is changed.
+
 **What if I accidentally remove something I needed?**
-Re-add the path manually:
+Restore the backup from the path printed by the command, or re-add the entry manually:
 ```powershell
 $cur = [Environment]::GetEnvironmentVariable("PATH", "User")
 [Environment]::SetEnvironmentVariable("PATH", "$cur;C:\the\path\you\want", "User")
@@ -193,6 +249,9 @@ Windows restricts writes to `HKEY_LOCAL_MACHINE` to Administrator accounts by de
 **Does pathman work inside a venv or conda environment?**
 Yes. pathman operates on the system/user PATH in the Registry — it's fully independent of any Python virtual environment.
 
+**Does it support ARM64?**
+Yes. The installer detects your architecture and the release workflow publishes both AMD64 and ARM64 binaries.
+
 ---
 
 ## Tech Stack
@@ -200,28 +259,30 @@ Yes. pathman operates on the system/user PATH in the Registry — it's fully ind
 - Go — single static binary, zero runtime dependencies
 - Windows Registry API via `golang.org/x/sys/windows/registry`
 - `SendMessageTimeout` (Win32) for no-restart PATH broadcasting
-- PowerShell installer / uninstaller — no external dependencies
+- PowerShell installer — no external dependencies
+- Tests and lint run in CI on every push and pull request
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the build, test and lint commands and
+the rule that every behaviour change ships with tests. Bug reports and pull
+requests are welcome.
 
 ---
 
 ## Changelog
 
-- **v1.1.0** — Added `--only dead`, `--only dup`, and `--entry` flags; fixed PowerShell window closing on install/uninstall
-- **v1.0.0** — Initial release: `doctor`, `fix`, install/uninstall scripts, no-restart broadcasting
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 ---
 
 ## License <a name="license"></a>
 
-MIT License
+MIT License — see [LICENSE](LICENSE).
 
 Copyright (c) 2026 YV
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---
 
