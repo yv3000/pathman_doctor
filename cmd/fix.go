@@ -31,12 +31,12 @@ func Fix() {
 		}
 	}
 
-	systemEntries, err := internal.ReadPATH("System")
+	systemEntries, err := internal.ReadPATH(internal.ScopeSystem)
 	if err != nil {
 		// proceed with what we have
 	}
 
-	userEntries, err := internal.ReadPATH("User")
+	userEntries, err := internal.ReadPATH(internal.ScopeUser)
 	if err != nil {
 		userEntries = []string{}
 	}
@@ -48,7 +48,7 @@ func Fix() {
 	var cleanUser []string
 
 	for _, e := range entries {
-		isIssue := e.Status == "DEAD" || e.Status == "DUP"
+		isIssue := e.Status == internal.StatusDead || e.Status == internal.StatusDup
 
 		if isIssue && entryFilter != "" {
 			normalized := strings.TrimRight(e.Path, `\/`)
@@ -57,7 +57,7 @@ func Fix() {
 			}
 		}
 		if isIssue && onlyFilter != "" {
-			if !strings.EqualFold(e.Status, onlyFilter) {
+			if !strings.EqualFold(string(e.Status), onlyFilter) {
 				isIssue = false
 			}
 		}
@@ -65,7 +65,7 @@ func Fix() {
 		if isIssue {
 			toRemove = append(toRemove, e)
 		} else {
-			if e.Scope == "System" {
+			if e.Scope == internal.ScopeSystem {
 				cleanSystem = append(cleanSystem, e.Path)
 			} else {
 				cleanUser = append(cleanUser, e.Path)

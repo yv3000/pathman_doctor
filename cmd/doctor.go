@@ -8,14 +8,15 @@ import (
 )
 
 func Doctor() {
-	fmt.Println("pathman doctor — scanning PATH entries...\n")
+	fmt.Println("pathman doctor — scanning PATH entries...")
+	fmt.Println()
 
-	systemEntries, err := internal.ReadPATH("System")
+	systemEntries, err := internal.ReadPATH(internal.ScopeSystem)
 	if err != nil {
 		color.Yellow("⚠️  Could not read System PATH (try running as Administrator)")
 	}
 
-	userEntries, err := internal.ReadPATH("User")
+	userEntries, err := internal.ReadPATH(internal.ScopeUser)
 	if err != nil {
 		color.Yellow("⚠️  Could not read User PATH")
 		userEntries = []string{}
@@ -37,12 +38,12 @@ func Doctor() {
 	for _, e := range entries {
 		var statusText string
 		switch e.Status {
-		case "OK":
+		case internal.StatusOK:
 			statusText = color.GreenString("✅ OK    ")
-		case "DEAD":
+		case internal.StatusDead:
 			statusText = color.RedString("❌ DEAD  ")
 			deadCount++
-		case "DUP":
+		case internal.StatusDup:
 			statusText = color.YellowString("⚠️  DUP   ")
 			dupCount++
 		}

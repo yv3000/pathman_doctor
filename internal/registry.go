@@ -8,43 +8,48 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-func getRegistryKeyAndName(scope string) (registry.Key, string, string) {
-	if scope == "User" {
+// getRegistryKeyAndName returns the registry root, subkey and value name that
+// store the PATH for a scope.
+func getRegistryKeyAndName(scope Scope) (registry.Key, string, string) {
+	if scope == ScopeUser {
 		return registry.CURRENT_USER, `Environment`, `PATH`
 	}
 	return registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control\Session Manager\Environment`, `Path`
 }
 
-func ReadPATH(scope string) ([]string, error) {
+// ReadPATH returns the PATH entries stored in the registry for a scope.
+func ReadPATH(scope Scope) ([]string, error) {
+	value, err := ReadRaw(scope)
+	if err != nil {
+		return nil, err
+	}
+	return SplitList(value), nil
+}
+
+// ReadRaw returns the unmodified registry value for a scope. It is used for
+// backups and by ReadPATH.
+func ReadRaw(scope Scope) (string, error) {
 	rootKey, path, valueName := getRegistryKeyAndName(scope)
 
 	k, err := registry.OpenKey(rootKey, path, registry.QUERY_VALUE)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer k.Close()
 
-	val, _, err := k.GetStringValue(valueName)
+	value, _, err := k.GetStringValue(valueName)
 	if err != nil {
 		if err == registry.ErrNotExist {
-			return []string{}, nil
+			return "", nil
 		}
-		return nil, err
+		return "", err
 	}
 
-	parts := strings.Split(val, ";")
-	var result []string
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			result = append(result, p)
-		}
-	}
-
-	return result, nil
+	return value, nil
 }
 
-func WritePATH(scope string, entries []string) error {
+// WritePATH stores entries as the expanded-string PATH value for a scope.
+func WritePATH(scope Scope, entries []string) error {
 	rootKey, path, valueName := getRegistryKeyAndName(scope)
 
 	k, err := registry.OpenKey(rootKey, path, registry.SET_VALUE)
@@ -53,34 +58,29 @@ func WritePATH(scope string, entries []string) error {
 	}
 	defer k.Close()
 
-	val := strings.Join(entries, ";")
-	err = k.SetExpandStringValue(valueName, val)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return k.SetExpandStringValue(valueName, strings.Join(entries, ";"))
 }
 
+// BroadcastChange tells open applications that environment variables changed.
 func BroadcastChange() {
 	user32 := syscall.NewLazyDLL("user32.dll")
 	sendMessageTimeoutW := user32.NewProc("SendMessageTimeoutW")
 
-	const HWND_BROADCAST = 0xffff
-	const WM_SETTINGCHANGE = 0x001A
-	const SMTO_ABORTIFHUNG = 0x0002
+	const hwndBroadcast = 0xffff
+	const wmSettingChange = 0x001A
+	const smtoAbortIfHung = 0x0002
 
 	envStr, err := syscall.UTF16PtrFromString("Environment")
 	if err != nil {
 		return
 	}
 
-	sendMessageTimeoutW.Call(
-		uintptr(HWND_BROADCAST),
-		uintptr(WM_SETTINGCHANGE),
+	_, _, _ = sendMessageTimeoutW.Call(
+		uintptr(hwndBroadcast),
+		uintptr(wmSettingChange),
 		0,
 		uintptr(unsafe.Pointer(envStr)),
-		uintptr(SMTO_ABORTIFHUNG),
+		uintptr(smtoAbortIfHung),
 		uintptr(5000),
 		0,
 	)
