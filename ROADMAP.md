@@ -100,7 +100,7 @@ detectable and it is not the behaviour the score is meant to reward.
 |---|---|---|
 | Build | `go build ./...` | passes |
 | Vet | `go vet ./...` | passes |
-| Tests | `go test ./... -cover` | passes; `cmd` 84.4%, `internal` 76.0%, `main` 0% (thin entry point) |
+| Tests | `go test ./... -cover` | passes; `cmd` 84.7%, `internal` 76.0%, `main` 33.3% |
 | Lint | `golangci-lint run` (v2.15.0) | 0 issues |
 | Workflows | `actionlint` (v1.7.12) | 0 errors for `ci.yml` and `release.yml` |
 | Fresh clone | `git archive` copy, README steps only | build, vet and tests pass |
@@ -108,6 +108,7 @@ detectable and it is not the behaviour the score is meant to reward.
 | No-op safety | `pathman fix`, answer `n` | exit 0, `Cancelled. No changes made.`, User PATH hash unchanged |
 | Flag validation | `pathman fix --only bogus` | exit 2, usage printed, no write |
 | Installer scripts | PowerShell `Parser::ParseFile` | `install.ps1` and `uninstall.ps1` parse cleanly |
+| Release version stamp | `go build -ldflags="-X main.version=v9.8.7"` | `pathman --version` prints `v9.8.7` |
 
 Coverage percentages are from the last local run; CI records them on every push.
 
