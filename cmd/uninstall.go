@@ -24,7 +24,7 @@ func Uninstall() {
 	err := cmd.Run()
 	if err != nil {
 		fmt.Printf("Uninstall failed: %v\n", err)
-		fmt.Println("Manual removal: delete %USERPROFILE%\\.pathman\\bin and remove it from your User PATH.")
+		fmt.Printf("Manual removal: delete %%USERPROFILE%%\\.pathman\\bin and remove it from your User PATH.\n")
 		os.Exit(1)
 	}
 }
