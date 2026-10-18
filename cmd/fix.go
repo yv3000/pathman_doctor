@@ -1,132 +1,119 @@
 package cmd
 
 import (
-	"bufio"
-	"fmt"
-	"os"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/yv3000/pathman_doctor/internal"
 )
 
-func Fix() {
-	// Parse optional flags: --entry <path>, --only dead|dup
-	var entryFilter string
-	var onlyFilter string
+// invalidStatus is used while parsing an unknown --only value so that a typo
+// never turns into "remove everything". Flag validation rejects it later.
+const invalidStatus internal.Status = "INVALID"
 
-	args := os.Args[2:]
+type fixOptions struct {
+	Entry string
+	Only  internal.Status
+}
+
+func parseFixArgs(args []string) fixOptions {
+	var opts fixOptions
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--entry":
 			if i+1 < len(args) {
-				entryFilter = strings.TrimRight(args[i+1], `\/`)
+				opts.Entry = strings.TrimRight(strings.TrimSpace(args[i+1]), `\/`)
 				i++
 			}
 		case "--only":
 			if i+1 < len(args) {
-				onlyFilter = strings.ToUpper(args[i+1])
+				opts.Only = parseOnly(args[i+1])
 				i++
 			}
 		}
 	}
+	return opts
+}
 
-	systemEntries, err := internal.ReadPATH(internal.ScopeSystem)
-	if err != nil {
-		// proceed with what we have
+func parseOnly(value string) internal.Status {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "dead":
+		return internal.StatusDead
+	case "dup":
+		return internal.StatusDup
+	default:
+		return invalidStatus
+	}
+}
+
+func (a App) printFixHelp() {
+	a.printf(`Usage: pathman fix [--only dead|dup] [--entry "C:\path"]
+
+Removes dead and duplicate PATH entries after showing what will change and
+asking for confirmation.`)
+}
+
+func (a App) runFix(args []string) int {
+	if hasHelpFlag(args) {
+		a.printFixHelp()
+		return ExitOK
 	}
 
-	userEntries, err := internal.ReadPATH(internal.ScopeUser)
+	opts := parseFixArgs(args)
+
+	systemEntries, _ := a.Store.ReadPATH(internal.ScopeSystem)
+	userEntries, err := a.Store.ReadPATH(internal.ScopeUser)
 	if err != nil {
-		userEntries = []string{}
+		userEntries = nil
 	}
 
 	entries := internal.AnalyzePATH(userEntries, systemEntries)
+	plan := internal.BuildPlan(entries, internal.Filter{Only: opts.Only, Entry: opts.Entry})
 
-	var toRemove []internal.Entry
-	var cleanSystem []string
-	var cleanUser []string
+	if len(plan.Remove) == 0 {
+		a.successf("PATH looks clean. Nothing to fix.")
+		return ExitOK
+	}
 
-	for _, e := range entries {
-		isIssue := e.Status == internal.StatusDead || e.Status == internal.StatusDup
+	a.printf("pathman fix — found %d issues\n", len(plan.Remove))
 
-		if isIssue && entryFilter != "" {
-			normalized := strings.TrimRight(e.Path, `\/`)
-			if !strings.EqualFold(normalized, entryFilter) {
-				isIssue = false
-			}
-		}
-		if isIssue && onlyFilter != "" {
-			if !strings.EqualFold(string(e.Status), onlyFilter) {
-				isIssue = false
-			}
-		}
-
-		if isIssue {
-			toRemove = append(toRemove, e)
-		} else {
-			if e.Scope == internal.ScopeSystem {
-				cleanSystem = append(cleanSystem, e.Path)
-			} else {
-				cleanUser = append(cleanUser, e.Path)
-			}
+	for _, entry := range plan.Remove {
+		switch entry.Status {
+		case internal.StatusDead:
+			a.printf("  %s %s   %s", red.Sprint("❌ Removing DEAD: "), entry.Path, entry.Note)
+		case internal.StatusDup:
+			a.printf("  %s  %s   (keeping first occurrence)", yellow.Sprint("⚠️  Removing DUP: "), entry.Path)
 		}
 	}
 
-	if len(toRemove) == 0 {
-		color.Green("✅ PATH looks clean. Nothing to fix.")
-		return
+	if !a.confirm("\nApply these changes?") {
+		a.printf("Cancelled. No changes made.")
+		return ExitOK
 	}
 
-	fmt.Printf("pathman fix — found %d issues\n\n", len(toRemove))
+	systemOK := true
+	userOK := true
 
-	for _, e := range toRemove {
-		if e.Status == "DEAD" {
-			fmt.Printf("  %s %s   %s\n", color.RedString("❌ Removing DEAD: "), e.Path, e.Note)
-		} else if e.Status == "DUP" {
-			fmt.Printf("  %s  %s   (keeping first occurrence)\n", color.YellowString("⚠️  Removing DUP: "), e.Path)
+	if plan.RemovedIn(internal.ScopeSystem) > 0 {
+		if err := a.Store.WritePATH(internal.ScopeSystem, plan.System); err != nil {
+			a.warnf("System PATH requires admin rights. Run as Administrator to fix System entries.")
+			systemOK = false
 		}
 	}
 
-	fmt.Print("\nApply these changes? (y/n): ")
-	reader := bufio.NewReader(os.Stdin)
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	if input != "y" {
-		fmt.Println("Cancelled. No changes made.")
-		return
-	}
-
-	systemSuccess := false
-	userSuccess := false
-
-	if len(systemEntries) > len(cleanSystem) {
-		err := internal.WritePATH("System", cleanSystem)
-		if err != nil {
-			color.Yellow("⚠️  System PATH requires admin rights. Run as Administrator to fix System entries.")
-		} else {
-			systemSuccess = true
+	if plan.RemovedIn(internal.ScopeUser) > 0 {
+		if err := a.Store.WritePATH(internal.ScopeUser, plan.User); err != nil {
+			a.errorf("Failed to write User PATH: %v", err)
+			userOK = false
 		}
-	} else {
-		systemSuccess = true
 	}
 
-	if len(userEntries) > len(cleanUser) {
-		err := internal.WritePATH("User", cleanUser)
-		if err != nil {
-			fmt.Printf("❌ Failed to write User PATH: %v\n", err)
-		} else {
-			userSuccess = true
-		}
-	} else {
-		userSuccess = true
+	if systemOK || userOK {
+		a.Store.Broadcast()
+		a.printf("✅ Done. PATH cleaned. %d entries removed.", len(plan.Remove))
+		a.printf("No restart required.")
+		return ExitOK
 	}
 
-	if systemSuccess || userSuccess {
-		internal.BroadcastChange()
-		fmt.Printf("✅ Done. PATH cleaned. %d entries removed.\nNo restart required.\n", len(toRemove))
-	} else {
-		fmt.Println("❌ No changes applied. Check the errors above.")
-	}
+	a.errorf("No changes applied. Check the errors above.")
+	return ExitFailure
 }
