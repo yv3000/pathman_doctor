@@ -35,7 +35,7 @@ func ReadRaw(scope Scope) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer k.Close()
+	defer func() { _ = k.Close() }()
 
 	value, _, err := k.GetStringValue(valueName)
 	if err != nil {
@@ -56,7 +56,7 @@ func WritePATH(scope Scope, entries []string) error {
 	if err != nil {
 		return err
 	}
-	defer k.Close()
+	defer func() { _ = k.Close() }()
 
 	return k.SetExpandStringValue(valueName, strings.Join(entries, ";"))
 }
