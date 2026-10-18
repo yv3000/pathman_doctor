@@ -1,0 +1,12 @@
+# Build output
+*.exe
+/dist/
+
+# Test and coverage output
+*.test
+coverage.out
+
+# Local tooling
+.pathman/
+.DS_Store
+Thumbs.db
