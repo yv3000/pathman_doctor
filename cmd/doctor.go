@@ -11,6 +11,11 @@ func (a App) runDoctor(args []string) int {
 		a.printf("Usage: pathman doctor\n\nScan the System and User PATH and report dead and duplicate entries.")
 		return ExitOK
 	}
+	if len(args) > 0 {
+		a.errorf("unexpected argument %q", args[0])
+		a.printf("Usage: pathman doctor")
+		return ExitUsage
+	}
 
 	a.printf("pathman doctor — scanning PATH entries...")
 	a.printf("")

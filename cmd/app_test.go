@@ -129,6 +129,14 @@ func TestDoctorReportsIssues(t *testing.T) {
 	}
 }
 
+func TestDoctorRejectsUnexpectedArguments(t *testing.T) {
+	app, _ := newTestApp(t, newFakeStore(), "")
+
+	if code := app.Run([]string{"doctor", "extra"}); code != ExitUsage {
+		t.Fatalf("exit = %d, want %d", code, ExitUsage)
+	}
+}
+
 func TestDoctorWarnsWhenSystemPathIsUnreadable(t *testing.T) {
 	store := newFakeStore()
 	store.readErr[internal.ScopeSystem] = errors.New("access denied")
