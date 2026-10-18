@@ -35,6 +35,7 @@ jobs:
         run: go test ./... -coverprofile=coverage.out -covermode=atomic
 
       - name: Coverage summary
+        shell: bash
         run: go tool cover -func=coverage.out
 
   lint:
