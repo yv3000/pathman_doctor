@@ -269,18 +269,60 @@ func TestFixEntryFilterTargetsOnePath(t *testing.T) {
 	}
 }
 
-func TestFixInvalidOnlyValueRemovesNothing(t *testing.T) {
+func TestFixRejectsInvalidOnlyValue(t *testing.T) {
 	store := newFakeStore()
 	store.user = []string{filepath.Join(t.TempDir(), "missing")}
 	app, out := newTestApp(store, "y\n")
 
-	if code := app.Run([]string{"fix", "--only", "bogus"}); code != ExitOK {
-		t.Fatalf("exit = %d, want %d", code, ExitOK)
+	if code := app.Run([]string{"fix", "--only", "bogus"}); code != ExitUsage {
+		t.Fatalf("exit = %d, want %d", code, ExitUsage)
 	}
 	if len(store.writes) != 0 {
 		t.Fatalf("writes = %#v, want none", store.writes)
 	}
-	if !strings.Contains(out.String(), "Nothing to fix") {
+	if !strings.Contains(out.String(), "invalid --only value") {
 		t.Fatalf("output = %q", out.String())
+	}
+}
+
+func TestFixRejectsInvalidArguments(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "missing entry value", args: []string{"fix", "--entry"}},
+		{name: "unknown flag", args: []string{"fix", "--nope"}},
+		{name: "positional argument", args: []string{"fix", "extra"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := newFakeStore()
+			store.user = []string{filepath.Join(t.TempDir(), "missing")}
+			app, _ := newTestApp(store, "y\n")
+
+			if code := app.Run(tt.args); code != ExitUsage {
+				t.Fatalf("exit = %d, want %d", code, ExitUsage)
+			}
+			if len(store.writes) != 0 {
+				t.Fatalf("writes = %#v, want none", store.writes)
+			}
+		})
+	}
+}
+
+func TestFixHelpDoesNotTouchPATH(t *testing.T) {
+	store := newFakeStore()
+	store.user = []string{filepath.Join(t.TempDir(), "missing")}
+	app, out := newTestApp(store, "")
+
+	if code := app.Run([]string{"fix", "--help"}); code != ExitOK {
+		t.Fatalf("exit = %d, want %d", code, ExitOK)
+	}
+	if !strings.Contains(out.String(), "Usage: pathman fix") {
+		t.Fatalf("output = %q", out.String())
+	}
+	if len(store.writes) != 0 {
+		t.Fatalf("writes = %#v, want none", store.writes)
 	}
 }

@@ -1,48 +1,44 @@
 package cmd
 
 import (
+	"flag"
+	"fmt"
+	"io"
 	"strings"
 
 	"github.com/yv3000/pathman_doctor/internal"
 )
-
-// invalidStatus is used while parsing an unknown --only value so that a typo
-// never turns into "remove everything". Flag validation rejects it later.
-const invalidStatus internal.Status = "INVALID"
 
 type fixOptions struct {
 	Entry string
 	Only  internal.Status
 }
 
-func parseFixArgs(args []string) fixOptions {
-	var opts fixOptions
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--entry":
-			if i+1 < len(args) {
-				opts.Entry = strings.TrimRight(strings.TrimSpace(args[i+1]), `\/`)
-				i++
-			}
-		case "--only":
-			if i+1 < len(args) {
-				opts.Only = parseOnly(args[i+1])
-				i++
-			}
-		}
-	}
-	return opts
-}
+func parseFixArgs(args []string) (fixOptions, error) {
+	flags := flag.NewFlagSet("fix", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	entry := flags.String("entry", "", `only fix this PATH entry`)
+	only := flags.String("only", "", `remove only "dead" or "dup" entries`)
 
-func parseOnly(value string) internal.Status {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "dead":
-		return internal.StatusDead
-	case "dup":
-		return internal.StatusDup
-	default:
-		return invalidStatus
+	if err := flags.Parse(args); err != nil {
+		return fixOptions{}, err
 	}
+	if flags.NArg() > 0 {
+		return fixOptions{}, fmt.Errorf("unexpected argument %q", flags.Arg(0))
+	}
+
+	opts := fixOptions{Entry: strings.TrimSpace(*entry)}
+	switch strings.ToLower(strings.TrimSpace(*only)) {
+	case "":
+	case "dead":
+		opts.Only = internal.StatusDead
+	case "dup":
+		opts.Only = internal.StatusDup
+	default:
+		return fixOptions{}, fmt.Errorf("invalid --only value %q (want dead or dup)", *only)
+	}
+
+	return opts, nil
 }
 
 func (a App) printFixHelp() {
@@ -58,7 +54,12 @@ func (a App) runFix(args []string) int {
 		return ExitOK
 	}
 
-	opts := parseFixArgs(args)
+	opts, err := parseFixArgs(args)
+	if err != nil {
+		a.errorf("%v", err)
+		a.printFixHelp()
+		return ExitUsage
+	}
 
 	systemEntries, sysErr := a.Store.ReadPATH(internal.ScopeSystem)
 	if sysErr != nil {
