@@ -140,6 +140,50 @@ func TestDoctorWarnsWhenSystemPathIsUnreadable(t *testing.T) {
 	}
 }
 
+func TestFixWarnsWhenSystemPathIsUnreadable(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing")
+
+	store := newFakeStore()
+	store.readErr[internal.ScopeSystem] = errors.New("access denied")
+	store.user = []string{missing}
+	app, out := newTestApp(store, "y\n")
+
+	if code := app.Run([]string{"fix"}); code != ExitOK {
+		t.Fatalf("exit = %d, want %d", code, ExitOK)
+	}
+	if !strings.Contains(out.String(), "Could not read System PATH") {
+		t.Fatalf("output = %q", out.String())
+	}
+
+	written, ok := store.writes[internal.ScopeUser]
+	if !ok {
+		t.Fatalf("user PATH was not cleaned: %#v", store.writes)
+	}
+	if len(written) != 0 {
+		t.Fatalf("user PATH = %#v, want empty", written)
+	}
+	if _, ok := store.writes[internal.ScopeSystem]; ok {
+		t.Fatalf("system PATH must not be written when it could not be read")
+	}
+}
+
+func TestFixFailsWhenBothScopesAreUnreadable(t *testing.T) {
+	store := newFakeStore()
+	store.readErr[internal.ScopeSystem] = errors.New("access denied")
+	store.readErr[internal.ScopeUser] = errors.New("access denied")
+	app, out := newTestApp(store, "y\n")
+
+	if code := app.Run([]string{"fix"}); code != ExitFailure {
+		t.Fatalf("exit = %d, want %d", code, ExitFailure)
+	}
+	if !strings.Contains(out.String(), "Could not read either PATH scope") {
+		t.Fatalf("output = %q", out.String())
+	}
+	if len(store.writes) != 0 {
+		t.Fatalf("writes = %#v, want none", store.writes)
+	}
+}
+
 func TestFixCancelDoesNotWrite(t *testing.T) {
 	store := newFakeStore()
 	store.user = []string{filepath.Join(t.TempDir(), "missing")}

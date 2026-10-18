@@ -60,10 +60,20 @@ func (a App) runFix(args []string) int {
 
 	opts := parseFixArgs(args)
 
-	systemEntries, _ := a.Store.ReadPATH(internal.ScopeSystem)
-	userEntries, err := a.Store.ReadPATH(internal.ScopeUser)
-	if err != nil {
+	systemEntries, sysErr := a.Store.ReadPATH(internal.ScopeSystem)
+	if sysErr != nil {
+		a.warnf("Could not read System PATH (try running as Administrator)")
+	}
+
+	userEntries, userErr := a.Store.ReadPATH(internal.ScopeUser)
+	if userErr != nil {
+		a.warnf("Could not read User PATH")
 		userEntries = nil
+	}
+
+	if sysErr != nil && userErr != nil {
+		a.errorf("Could not read either PATH scope; nothing to fix.")
+		return ExitFailure
 	}
 
 	entries := internal.AnalyzePATH(userEntries, systemEntries)
