@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -45,9 +46,21 @@ func DefaultAnalyzer() Analyzer {
 	return Analyzer{Expand: Expand, Exists: dirExists}
 }
 
-// Expand resolves environment variables inside a PATH entry.
+// percentVar matches %VAR% references used by Windows PATH values.
+var percentVar = regexp.MustCompile(`%[^%]+%`)
+
+// Expand resolves environment variables inside a PATH entry. Windows PATH
+// values usually use %VAR% syntax, which os.ExpandEnv does not understand, so
+// both styles are supported. Unresolved variables are left untouched instead
+// of collapsing to an empty path.
 func Expand(raw string) string {
-	return os.ExpandEnv(raw)
+	return percentVar.ReplaceAllStringFunc(os.ExpandEnv(raw), func(match string) string {
+		name := strings.TrimSpace(match[1 : len(match)-1])
+		if value, ok := os.LookupEnv(name); ok {
+			return value
+		}
+		return match
+	})
 }
 
 func dirExists(path string) bool {
