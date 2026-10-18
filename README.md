@@ -52,7 +52,7 @@ pathman doctor   # scan your PATH for issues
 
 ## Build from source
 
-Requires **Windows** and **Go 1.21 or newer**. No other tooling is needed.
+Requires **Windows** and **Go 1.26 or newer**. No other tooling is needed.
 
 ```powershell
 git clone https://github.com/yv3000/pathman_doctor
@@ -92,7 +92,7 @@ irm https://raw.githubusercontent.com/yv3000/pathman_doctor/main/uninstall.ps1 |
 ## Proof it works
 
 ```powershell
-pathman --version              # pathman v1.1.0
+pathman --version              # pathman v1.2.0
 
 pathman doctor                 # scan and show all issues
 
@@ -220,7 +220,7 @@ pathman fix --entry "C:\some\broken\path"
 | **OS** | Windows 10 / Windows 11 |
 | **Architecture** | AMD64 or ARM64 |
 | **Admin** | Only for System PATH fixes (optional) |
-| **Go** | 1.21+ if you build from source |
+| **Go** | 1.26+ if you build from source |
 | **Dependencies** | None at runtime — single static binary |
 
 ---

@@ -7,7 +7,7 @@ stack, and none should be added for a change to this repository.
 ## Prerequisites
 
 - Windows 10 or Windows 11
-- Go 1.21 or newer
+- Go 1.26 or newer
 - Git
 
 ## Setup

@@ -6,6 +6,8 @@ All notable changes to pathman are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-18
+
 ### Added
 
 - Test suite covering PATH parsing, analysis, removal planning, registry key
@@ -27,6 +29,10 @@ All notable changes to pathman are documented here. The format follows
   executing a remote PowerShell script.
 - Release builds inject the tag version, so `pathman --version` matches the
   published release.
+- Dependencies updated to `fatih/color` 1.19.0 and `golang.org/x/sys` 0.49.0;
+  the minimum Go version is now 1.26.
+- GitHub Actions updated to `actions/checkout@v7`, `actions/setup-go@v7` and
+  `softprops/action-gh-release@v3`.
 
 ### Fixed
 
@@ -34,6 +40,9 @@ All notable changes to pathman are documented here. The format follows
   folders, which could make `fix` delete working System PATH entries.
 - System PATH read errors in `fix` were silently ignored.
 - `go vet` flagged an unescaped percent sign in the uninstall hint.
+- CI failed on Windows because Go sources were checked out with CRLF line
+  endings; `.gitattributes` now pins them to LF and tests print per-package
+  coverage without a profile file.
 
 ### Removed
 

@@ -84,10 +84,11 @@ detectable and it is not the behaviour the score is meant to reward.
 
 ## 5. Manual steps and remaining work
 
-- [ ] Re-run the datafactor audit after pushing these commits.
-- [ ] Enable branch protection for `main` in GitHub: Settings → Branches →
-      require the `build-test`, `lint` and `vulncheck` checks before merging.
-- [ ] Push the new commits to `origin` when ready and tag `v1.2.0`.
+- [x] Push the commits to `origin` and tag `v1.2.0` (release workflow runs the
+      tests and publishes both binaries).
+- [x] Enable branch protection for `main`: the `Build, vet and test`, `Lint`
+      and `Vulnerability scan` checks are required.
+- [ ] Re-run the datafactor audit after the release.
 - [ ] Replace the `@latest` govulncheck install in CI with a pinned version
       once a version that supports the runner's Go is chosen.
 - [ ] Add an integration test that exercises a throwaway registry key if the
@@ -109,6 +110,9 @@ detectable and it is not the behaviour the score is meant to reward.
 | Flag validation | `pathman fix --only bogus` | exit 2, usage printed, no write |
 | Installer scripts | PowerShell `Parser::ParseFile` | `install.ps1` and `uninstall.ps1` parse cleanly |
 | Release version stamp | `go build -ldflags="-X main.version=v9.8.7"` | `pathman --version` prints `v9.8.7` |
+| Remote CI | GitHub Actions run 39101743236 | build/vet/test, lint and vulncheck all pass |
+| Branch protection | GitHub API | required checks configured on `main` |
+| Dependency PRs | Dependabot #1–#5 | rebased, green, merged |
 
 Coverage percentages are from the last local run; CI records them on every push.
 
