@@ -32,11 +32,7 @@ jobs:
         run: go vet ./...
 
       - name: Test with coverage
-        run: go test ./... -coverprofile=coverage.out -covermode=atomic
-
-      - name: Coverage summary
-        shell: bash
-        run: go tool cover -func=coverage.out
+        run: go test ./... -cover -covermode=atomic
 
   lint:
     name: Lint
