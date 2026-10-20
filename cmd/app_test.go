@@ -418,6 +418,53 @@ func TestFixRejectsInvalidArguments(t *testing.T) {
 	}
 }
 
+func TestFixRejectsMalformedEntryValue(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "empty value", args: []string{"fix", "--entry", ""}},
+		{name: "whitespace only", args: []string{"fix", "--entry", "   "}},
+		{name: "entry separator", args: []string{"fix", "--entry", `C:\one;C:\two`}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := newFakeStore()
+			store.user = []string{filepath.Join(t.TempDir(), "missing")}
+			app, out := newTestApp(t, store, "y\n")
+
+			if code := app.Run(tt.args); code != ExitUsage {
+				t.Fatalf("exit = %d, want %d", code, ExitUsage)
+			}
+			if len(store.writes) != 0 {
+				t.Fatalf("writes = %#v, want none", store.writes)
+			}
+			if !strings.Contains(out.String(), "Usage: pathman fix") {
+				t.Fatalf("output = %q, want usage", out.String())
+			}
+		})
+	}
+}
+
+func TestFixTrimsEntryValueBeforeMatching(t *testing.T) {
+	dir := t.TempDir()
+	first := filepath.Join(dir, "first")
+	second := filepath.Join(dir, "second")
+
+	store := newFakeStore()
+	store.user = []string{first, second}
+	app, _ := newTestApp(t, store, "y\n")
+
+	if code := app.Run([]string{"fix", "--entry", "  " + second + "  "}); code != ExitOK {
+		t.Fatalf("exit = %d, want %d", code, ExitOK)
+	}
+	written := store.writes[internal.ScopeUser]
+	if len(written) != 1 || written[0] != first {
+		t.Fatalf("user PATH = %#v, want %q", written, first)
+	}
+}
+
 func TestFixHelpDoesNotTouchPATH(t *testing.T) {
 	store := newFakeStore()
 	store.user = []string{filepath.Join(t.TempDir(), "missing")}

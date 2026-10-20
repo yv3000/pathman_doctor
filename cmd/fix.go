@@ -27,7 +27,22 @@ func parseFixArgs(args []string) (fixOptions, error) {
 		return fixOptions{}, fmt.Errorf("unexpected argument %q", flags.Arg(0))
 	}
 
-	opts := fixOptions{Entry: strings.TrimSpace(*entry)}
+	entrySet := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "entry" {
+			entrySet = true
+		}
+	})
+
+	opts := fixOptions{}
+	if entrySet {
+		validated, err := internal.ValidateEntry(*entry)
+		if err != nil {
+			return fixOptions{}, err
+		}
+		opts.Entry = validated
+	}
+
 	switch strings.ToLower(strings.TrimSpace(*only)) {
 	case "":
 	case "dead":
