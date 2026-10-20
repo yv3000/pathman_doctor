@@ -29,6 +29,7 @@ Run the built binary with `go run . doctor` or `.\pathman.exe doctor` after
 | Build | `go build ./...` |
 | Vet | `go vet ./...` |
 | Tests | `go test ./... -cover` |
+| Coverage gate | `./scripts/coverage-gate.ps1` |
 | Lint | `golangci-lint run` |
 | Vulnerabilities | `govulncheck ./...` |
 
@@ -42,8 +43,11 @@ to `main`. All three jobs (`build-test`, `lint`, `vulncheck`) must be green.
 - Keep commits focused: one fix or feature per commit, with the tests that prove
   it. Do not mix formatting, refactors and behaviour changes.
 - Never write to the live `HKCU`/`HKLM` PATH from a test. Inject a fake
-  `internal.Store`; the only allowed live access in tests is reading the current
-  user's PATH.
+  `internal.Store` and let registry reads and writes go through the
+  `openRegistryKey` seam. The only live check is `TestReadPATHUserIsReadable`,
+  which is opt-in with `PATHMAN_LIVE_REGISTRY=1`.
+- Keep `cmd` and `internal` at or above 80% statement coverage; the gate fails
+  the build otherwise.
 - Prefer the standard library. The CLI intentionally has two direct
   dependencies (`fatih/color` and `golang.org/x/sys`); justify any new one.
 - Keep command output readable in a plain terminal and respect `NO_COLOR` via

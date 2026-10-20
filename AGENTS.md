@@ -19,14 +19,16 @@ Working notes for anyone — human or agent — changing pathman.
 go build ./...
 go vet ./...
 go test ./... -cover
+.\scripts\coverage-gate.ps1
 golangci-lint run
 govulncheck ./...
 go run . doctor
 ```
 
-CI (`.github/workflows/ci.yml`) runs build, vet, tests with coverage,
-golangci-lint and govulncheck on `windows-latest` for every push and pull
-request to `main`.
+CI (`.github/workflows/ci.yml`) runs build, vet, the coverage gate,
+golangci-lint and govulncheck (pinned to v1.9.0) on `windows-latest` for every
+push and pull request to `main`. The gate fails when `cmd` or `internal` drops
+below 80% statement coverage or the module total drops below 80%.
 
 ## Environment guardrails (this workstation)
 
@@ -55,9 +57,11 @@ cmd/doctor.go            scan and report
 cmd/fix.go               flag parsing, plan, confirmation, backup, write
 cmd/uninstall.go         local removal of the User PATH entry and files
 internal/path.go         pure expansion, parsing, analysis and planning
+internal/validate.go     the single rule for a user-supplied PATH entry
 internal/registry.go     registry read/write, scope mapping, WM_SETTINGCHANGE
 internal/backup.go       raw PATH snapshots before a write
 internal/store.go        Store interface + RegistryStore
+scripts/coverage-gate.ps1  runs the tests and enforces the coverage floor
 ```
 
 Exit codes: `0` success, `1` nothing applied or only partly applied, `2` invalid
@@ -66,7 +70,9 @@ usage. `main` is the only place that calls `os.Exit`.
 ## Rules that are easy to break
 
 - **Never** write to the live `HKCU`/`HKLM` PATH from a test. Inject a fake
-  `internal.Store`. Reading the current user's PATH in a test is allowed.
+  `internal.Store`, and keep registry reads and writes behind the
+  `openRegistryKey` seam so they run against a fake key. The only live check is
+  `TestReadPATHUserIsReadable`, opt-in with `PATHMAN_LIVE_REGISTRY=1`.
 - `fix` must not write a scope whose read failed, and must report a partial run
   with exit code `1` instead of a success banner.
 - Back up every scope that will change; abort if the backup cannot be written.
@@ -83,6 +89,8 @@ usage. `main` is the only place that calls `os.Exit`.
 
 ## Testing notes that are not obvious from the code
 
+- `scripts/coverage-gate.ps1` runs the tests itself; do not also add a separate
+  `go test` step to CI or the suite runs twice.
 - `uninstall` schedules a detached `cmd /c ping ... & rmdir` cleanup because
   Windows locks the running executable. An agent sandbox that kills the whole
   process tree when a command finishes also kills that child, so verify the

@@ -65,9 +65,18 @@ go test ./... -cover
 .\pathman.exe doctor
 ```
 
-`go test ./...` runs the whole suite against a fake registry store, so it never
-modifies your real PATH. The repository does not contain a prebuilt binary;
-release executables are produced by CI for every `v*` tag.
+`go test ./...` runs the whole suite against a fake registry store and a fake
+registry key, so it never reads or writes your live PATH. The coverage gate runs
+the same tests and fails below 80% per package (`cmd`, `internal`) and overall:
+
+```powershell
+.\scripts\coverage-gate.ps1
+```
+
+The live-registry smoke test is opt-in: set `PATHMAN_LIVE_REGISTRY=1` before
+`go test` if you want to read your own User PATH. The repository does not
+contain a prebuilt binary; release executables are produced by CI for every
+`v*` tag.
 
 ---
 

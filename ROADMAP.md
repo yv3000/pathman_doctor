@@ -1,9 +1,38 @@
 # Roadmap
 
-This file tracks the work triggered by the datafactor repository report
-(score 40, grade D) and how each item maps to the buyer-facing signals.
+This file tracks the work triggered by two datafactor repository reports: the
+first scored 40 (grade D) and drove the v1.2.x pass; the second, on 2026-10-20,
+scored 68 (grade C).
 
-## 1. Report items and status
+## 0. Second audit: score 68
+
+Five dimensions were below 75. This pass targets them with code and CI changes,
+not with cosmetic commits.
+
+| Dimension | Score | Change in this pass |
+|---|---|---|
+| Architecture & robustness | 62 | `internal.ValidateEntry` gives one validation rule; `openRegistryKey` makes the registry layer injectable |
+| Test coverage | 62 | coverage gate in CI; fake registry key covers reads, writes, missing values and errors; uninstall branches covered |
+| Security hygiene | 68 | `--entry` is validated before PATH is read; malformed values exit 2 |
+| Docs & onboarding | 82 | README and CONTRIBUTING document the gate and the opt-in live check |
+| Code cleanliness | 80 | unchanged, already above target |
+| History & maintenance | 48 | real work split into focused, tested commits; sustained history cannot be created in one session (section 4) |
+| Dependency health | 72 | Dependabot groups routine updates; `govulncheck` pinned instead of `@latest` |
+| CI/CD maturity | 78 | the test step now enforces coverage instead of only reporting it |
+
+Report fix list from the second audit:
+
+| # | Fix | Status |
+|---|---|---|
+| 03 | Enforce a coverage threshold in CI | Done — `scripts/coverage-gate.ps1` runs the suite and fails below 80% for `cmd`, `internal` and the module total; `ci.yml` calls it |
+| 04 | Broaden integration-style tests for registry and uninstall paths | Done — fake registry key covers `ReadRaw`/`ReadPATH`/`WritePATH` success, missing value, open error and write error; uninstall covers cleanup ordering, a failed PATH write and an absent entry |
+| 05 | Add input validation at the flag-parsing boundary | Done — `internal.ValidateEntry`, called by `parseFixArgs`, with table-driven tests |
+| 06 | Grow commit history with paired feature and test commits | Ongoing — each change in this pass is its own commit with its tests; real increments over time remain the only honest fix |
+| 07 | Document and verify a fully offline test run | Done — default tests use a fake store and fake registry key; `TestReadPATHUserIsReadable` is opt-in with `PATHMAN_LIVE_REGISTRY=1` |
+| 01 | Ship features with their tests in small focused commits | Applied to every commit in this pass |
+| 02 | Keep developing the repository over time, in real increments | Cannot be faked; see section 4 |
+
+## 1. First report items and status
 
 | # | Report item | Status | Evidence |
 |---|---|---|---|
@@ -90,11 +119,11 @@ detectable and it is not the behaviour the score is meant to reward.
       and `Vulnerability scan` checks are required.
 - [x] End-to-end run on a real machine: registry write with `--entry`
       filters, uninstall and installer (see the verification table).
-- [ ] Re-run the datafactor audit after the release.
-- [ ] Replace the `@latest` govulncheck install in CI with a pinned version
-      once a version that supports the runner's Go is chosen.
-- [ ] Add an integration test that exercises a throwaway registry key if the
-      registry layer changes; today only the key mapping is unit tested.
+- [ ] Re-run the datafactor audit after this pass.
+- [x] Replace the `@latest` govulncheck install in CI with a pinned version:
+      v1.9.0 is installed and reports no vulnerabilities on Go 1.26.1.
+- [x] Make the registry layer testable without the live hive: `openRegistryKey`
+      is a seam and the registry tests use a fake key.
 - [ ] Optional: `doctor --json` for scripting and `fix --dry-run` for CI use.
 
 ## 6. Verification performed
@@ -103,7 +132,10 @@ detectable and it is not the behaviour the score is meant to reward.
 |---|---|---|
 | Build | `go build ./...` | passes |
 | Vet | `go vet ./...` | passes |
-| Tests | `go test ./... -cover` | passes; `cmd` 84.7%, `internal` 76.0%, `main` 33.3% |
+| Tests | `go test ./... -cover` | passes; `cmd` 86.0%, `internal` 89.4%, `main` 33.3% |
+| Coverage gate | `./scripts/coverage-gate.ps1` | passes; total 87.0%, floors 80/80/80 |
+| Negative gate check | `./scripts/coverage-gate.ps1 -MinimumPackage 95` | exits 1 with both packages listed |
+| Vulnerability scan | `govulncheck v1.9.0 ./...` | 0 vulnerabilities reachable |
 | Lint | `golangci-lint run` (v2.15.0) | 0 issues |
 | Workflows | `actionlint` (v1.7.12) | 0 errors for `ci.yml` and `release.yml` |
 | Fresh clone | `git archive` copy, README steps only | build, vet and tests pass |

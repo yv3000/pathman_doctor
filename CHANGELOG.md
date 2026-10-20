@@ -6,6 +6,24 @@ All notable changes to pathman are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `--entry` values are validated at the flag boundary: empty, whitespace-only
+  and semicolon-separated values exit with status 2 before PATH is read.
+  `internal.ValidateEntry` is the single rule every command uses.
+- CI enforces coverage. `scripts/coverage-gate.ps1` fails the build when `cmd`
+  or `internal` drops below 80% or the module total drops below 80%.
+- The registry layer is injectable, so reads, writes, missing values and error
+  propagation are tested against a fake key instead of the live hive.
+
+### Changed
+
+- The live registry smoke test is opt-in (`PATHMAN_LIVE_REGISTRY=1`); the
+  default suite runs without touching the registry.
+- Dependabot groups routine Go module and GitHub Actions updates into one pull
+  request per ecosystem per week.
+- CI pins `govulncheck` to v1.9.0 instead of `@latest`.
+
 ## [1.2.2] - 2026-10-18
 
 ### Changed
