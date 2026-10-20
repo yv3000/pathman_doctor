@@ -135,6 +135,7 @@ detectable and it is not the behaviour the score is meant to reward.
 | Tests | `go test ./... -cover` | passes; `cmd` 86.0%, `internal` 89.4%, `main` 33.3% |
 | Coverage gate | `./scripts/coverage-gate.ps1` | passes; total 87.0%, floors 80/80/80 |
 | Negative gate check | `./scripts/coverage-gate.ps1 -MinimumPackage 95` | exits 1 with both packages listed |
+| Fresh profile | `LOCALAPPDATA=<empty temp> go test ./... -cover` | passes; the live registry test skips, so no pre-existing PATH or backup state is needed |
 | Vulnerability scan | `govulncheck v1.9.0 ./...` | 0 vulnerabilities reachable |
 | Lint | `golangci-lint run` (v2.15.0) | 0 issues |
 | Workflows | `actionlint` (v1.7.12) | 0 errors for `ci.yml` and `release.yml` |
