@@ -35,6 +35,17 @@ jobs:
         shell: pwsh
         run: ./scripts/coverage-gate.ps1
 
+      # Keep the profile even when the gate fails: it explains which package
+      # dropped and lets a reviewer see the per-function percentages.
+      - name: Upload coverage profile
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage.out
+          if-no-files-found: warn
+          retention-days: 7
+
   lint:
     name: Lint
     runs-on: windows-latest
