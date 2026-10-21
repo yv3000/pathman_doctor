@@ -182,7 +182,8 @@ detectable and it is not the behaviour the score is meant to reward.
 | Remote CI | GitHub runs 39607449253 (push) and 39606984385 (cold dispatch) | all three jobs pass in both |
 | Branch protection | GitHub API | required checks configured on `main` |
 | Dependency PRs | Dependabot #1–#5 | rebased, green, merged |
-| Release pipeline | tags `v1.2.0`, `v1.2.1`, `v1.2.2` | tests ran, amd64/arm64 assets uploaded, `--version` reports the tag |
+| Release pipeline | tags `v1.2.0`–`v1.2.2` and `v1.3.0` | tests ran, amd64/arm64 assets uploaded, notes published |
+| Release artifact | downloaded `pathman-windows-amd64.exe` from `v1.3.0` | prints `pathman v1.3.0`; `PATHMAN_LOG=1` also prints `[INFO] pathman v1.3.0` |
 | Live registry write | `fix --only dup/dead --entry <temp entry>` | both filters removed only the test entry; 66 existing entries unchanged; backups written |
 | Live uninstall | `pathman uninstall` on the installed binary | PATH entry removed with backup; the locked folder exposed a defect fixed in v1.2.1 |
 | Deferred cleanup | same command string run directly with `cmd /c` | deletes the folder; the agent sandbox kills detached children, so the scheduled run is verified by unit tests plus the direct invocation |
