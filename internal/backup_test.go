@@ -37,6 +37,25 @@ func TestSaveBackupRequiresDirectory(t *testing.T) {
 	}
 }
 
+func TestDefaultBackupDirFallsBackToTempDir(t *testing.T) {
+	t.Setenv("LOCALAPPDATA", "")
+	want := filepath.Join(os.TempDir(), "pathman", "backups")
+	if got := DefaultBackupDir(); got != want {
+		t.Fatalf("DefaultBackupDir() = %q, want %q", got, want)
+	}
+}
+
+func TestSaveBackupFailsWhenTargetIsNotADirectory(t *testing.T) {
+	blocker := filepath.Join(t.TempDir(), "blocker")
+	if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
+		t.Fatalf("writing blocker file: %v", err)
+	}
+
+	if _, err := SaveBackup(blocker, ScopeUser, `C:\Windows`); err == nil {
+		t.Fatal("SaveBackup into a file should fail")
+	}
+}
+
 func TestDefaultBackupDirUsesLocalAppData(t *testing.T) {
 	t.Setenv("LOCALAPPDATA", `C:\Users\me\AppData\Local`)
 	want := filepath.Join(`C:\Users\me\AppData\Local`, "pathman", "backups")
