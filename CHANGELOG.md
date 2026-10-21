@@ -6,6 +6,10 @@ All notable changes to pathman are documented here. The format follows
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.3.0] - 2026-10-21
+
 ### Added
 
 - `--entry` values are validated at the flag boundary: empty, whitespace-only
@@ -15,6 +19,15 @@ All notable changes to pathman are documented here. The format follows
   or `internal` drops below 80% or the module total drops below 80%.
 - The registry layer is injectable, so reads, writes, missing values and error
   propagation are tested against a fake key instead of the live hive.
+- `internal.ValidateOnlyFlag` owns the `--only` rule next to `ValidateEntry`, so
+  both flags are validated in one place instead of inside the parser.
+- `PATHMAN_LOG=1` writes leveled `INFO`/`WARN`/`ERROR` diagnostics from
+  `internal.Logf`. The default run stays silent, so the console output is
+  unchanged.
+- CI uploads `coverage.out` as the `coverage` artifact on every run, including
+  failed ones, so a regression can be read per function.
+- CI runs the full suite weekly with the Go module cache disabled, which proves
+  a cold clone builds and tests.
 
 ### Changed
 
