@@ -43,15 +43,11 @@ func parseFixArgs(args []string) (fixOptions, error) {
 		opts.Entry = validated
 	}
 
-	switch strings.ToLower(strings.TrimSpace(*only)) {
-	case "":
-	case "dead":
-		opts.Only = internal.StatusDead
-	case "dup":
-		opts.Only = internal.StatusDup
-	default:
-		return fixOptions{}, fmt.Errorf("invalid --only value %q (want dead or dup)", *only)
+	status, err := internal.ValidateOnlyFlag(*only)
+	if err != nil {
+		return fixOptions{}, err
 	}
+	opts.Only = status
 
 	return opts, nil
 }

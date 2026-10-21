@@ -21,3 +21,20 @@ func ValidateEntry(raw string) (string, error) {
 	}
 	return entry, nil
 }
+
+// ValidateOnlyFlag turns a --only flag value into the status filter used by
+// BuildPlan. An empty value keeps the default (dead and duplicate entries);
+// anything else must name a status explicitly instead of silently matching
+// nothing.
+func ValidateOnlyFlag(raw string) (Status, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "":
+		return "", nil
+	case "dead":
+		return StatusDead, nil
+	case "dup":
+		return StatusDup, nil
+	default:
+		return "", fmt.Errorf("invalid --only value %q (want dead or dup)", raw)
+	}
+}
