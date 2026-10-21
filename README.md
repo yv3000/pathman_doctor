@@ -73,10 +73,12 @@ the same tests and fails below 80% per package (`cmd`, `internal`) and overall:
 .\scripts\coverage-gate.ps1
 ```
 
-The live-registry smoke test is opt-in: set `PATHMAN_LIVE_REGISTRY=1` before
-`go test` if you want to read your own User PATH. The repository does not
-contain a prebuilt binary; release executables are produced by CI for every
-`v*` tag.
+CI uploads the profile as the `coverage` artifact on every run, even when the
+gate fails, and repeats the whole suite weekly with the Go module cache disabled
+so a cold clone is proven to build. The live-registry smoke test is opt-in: set
+`PATHMAN_LIVE_REGISTRY=1` before `go test` if you want to read your own User
+PATH. The repository does not contain a prebuilt binary; release executables are
+produced by CI for every `v*` tag.
 
 ---
 
@@ -102,7 +104,7 @@ irm https://raw.githubusercontent.com/yv3000/pathman_doctor/main/uninstall.ps1 |
 ## Proof it works
 
 ```powershell
-pathman --version              # pathman v1.2.0
+pathman --version              # pathman v1.3.0
 
 pathman doctor                 # scan and show all issues
 
@@ -140,6 +142,17 @@ or an invalid `--only` value prints the usage and changes nothing.
 
 `pathman fix` exits with `1` when, for example, it cleaned the User PATH but
 lacked Administrator rights for the System PATH.
+
+### Diagnostics
+
+Set `PATHMAN_LOG=1` to also write leveled `INFO`, `WARN` and `ERROR` lines to
+stderr. The colored console output is unchanged, so the flag is only useful when
+you are collecting detail for a bug report:
+
+```powershell
+$env:PATHMAN_LOG = "1"
+pathman doctor
+```
 
 ---
 
