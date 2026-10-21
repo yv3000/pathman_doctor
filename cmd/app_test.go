@@ -99,6 +99,25 @@ func TestRunHelpAndVersion(t *testing.T) {
 	}
 }
 
+func TestRunShortFlags(t *testing.T) {
+	app, out := newTestApp(t, newFakeStore(), "")
+
+	if code := app.Run([]string{"-v"}); code != ExitOK {
+		t.Fatalf("-v exit = %d, want %d", code, ExitOK)
+	}
+	if !strings.Contains(out.String(), "pathman v9.9.9") {
+		t.Fatalf("-v output = %q", out.String())
+	}
+
+	out.Reset()
+	if code := app.Run([]string{"-h"}); code != ExitOK {
+		t.Fatalf("-h exit = %d, want %d", code, ExitOK)
+	}
+	if !strings.Contains(out.String(), "Usage:") {
+		t.Fatalf("-h output = %q", out.String())
+	}
+}
+
 func TestRunUnknownCommandIsUsageError(t *testing.T) {
 	app, out := newTestApp(t, newFakeStore(), "")
 
@@ -127,6 +146,22 @@ func TestDoctorReportsIssues(t *testing.T) {
 		if !strings.Contains(text, want) {
 			t.Fatalf("output missing %q:\n%s", want, text)
 		}
+	}
+}
+
+func TestDoctorHelpDoesNotReadPATH(t *testing.T) {
+	store := newFakeStore()
+	store.readErr[internal.ScopeUser] = errors.New("should not be read")
+	app, out := newTestApp(t, store, "")
+
+	if code := app.Run([]string{"doctor", "--help"}); code != ExitOK {
+		t.Fatalf("exit = %d, want %d", code, ExitOK)
+	}
+	if !strings.Contains(out.String(), "Usage: pathman doctor") {
+		t.Fatalf("output = %q", out.String())
+	}
+	if strings.Contains(out.String(), "Could not read") {
+		t.Fatalf("doctor --help read PATH: %q", out.String())
 	}
 }
 
