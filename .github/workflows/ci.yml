@@ -9,6 +9,7 @@ on:
     # Weekly cold run: the Go module cache is skipped, so a clean clone has to
     # build and test without anything warmed by earlier pushes.
     - cron: '17 4 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,7 +28,7 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-          cache: ${{ github.event_name != 'schedule' }}
+          cache: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
       - name: Build
         run: go build ./...
@@ -59,7 +60,7 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: stable
-          cache: ${{ github.event_name != 'schedule' }}
+          cache: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
       - uses: golangci/golangci-lint-action@v9
         with:
@@ -74,7 +75,7 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: stable
-          cache: ${{ github.event_name != 'schedule' }}
+          cache: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
