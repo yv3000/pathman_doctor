@@ -1,10 +1,38 @@
 # Roadmap
 
-This file tracks the work triggered by two datafactor repository reports: the
+This file tracks the work triggered by three datafactor repository reports: the
 first scored 40 (grade D) and drove the v1.2.x pass; the second, on 2026-10-20,
-scored 68 (grade C).
+scored 68 (grade C); the third, on 2026-10-21, scored 77 (grade B).
 
-## 0. Second audit: score 68
+## 0. Third audit: score 77
+
+Seven of eight dimensions are at or above 75. This pass targets the two that are
+not, plus the CI visibility items in the report.
+
+| Dimension | Score | Change in this pass |
+|---|---|---|
+| Architecture & robustness | 72 | `internal.Logf` gives diagnostics a leveled sink instead of only colored writes |
+| Test coverage | 78 | backup fallback and write failure, `-v`/`-h`, doctor help covered; profile uploaded as an artifact; total 89.4% |
+| Security hygiene | 80 | `--only` moved next to `ValidateEntry`, so both flags share one validation boundary |
+| Docs & onboarding | 85 | README documents `PATHMAN_LOG` and the uploaded profile |
+| Code cleanliness | 85 | unchanged, already above target |
+| History & maintenance | 55 | `v1.3.0` tagged with release notes; sustained cadence is still real work over weeks (section 4) |
+| Dependency health | 80 | unchanged, above target |
+| CI/CD maturity | 85 | coverage artifact on every run; weekly cold-cache run with module caching disabled |
+
+Report fix list from the third audit:
+
+| # | Fix | Status |
+|---|---|---|
+| 03 | Add a second contributor or a sustained cadence signal | Partial — `v1.3.0` has release notes and a changelog; a second human has to contribute under their own identity |
+| 04 | Make input validation explicit and consistently checked | Done — `ValidateEntry` and `ValidateOnlyFlag` live in `internal/validate.go`, are called from `parseFixArgs`, and have table tests |
+| 05 | Raise coverage gate visibility and extend breadth | Done — `coverage.out` is uploaded as an artifact; the dispatch and backup branches are covered. The only thin function left is the detached `cmd.exe` cleanup, which a unit test cannot safely spawn |
+| 06 | Add a structured logging seam | Done — `internal.Logf` plus `App.Log`, opt-in with `PATHMAN_LOG=1`; tests assert the level tags and that the console stays clean |
+| 07 | Confirm fresh-clone reproducibility end to end | Done — the CI schedule runs the same jobs weekly with caching disabled |
+| 01 | Ship features with their tests in small focused commits | Applied to every commit in this pass |
+| 02 | Keep developing over time, in real increments | Cannot be faked; see section 4 |
+
+## 0.1 Second audit: score 68
 
 Five dimensions were below 75. This pass targets them with code and CI changes,
 not with cosmetic commits.
@@ -124,6 +152,8 @@ detectable and it is not the behaviour the score is meant to reward.
       v1.9.0 is installed and reports no vulnerabilities on Go 1.26.1.
 - [x] Make the registry layer testable without the live hive: `openRegistryKey`
       is a seam and the registry tests use a fake key.
+- [x] Tag `v1.3.0` with release notes after the third audit.
+- [x] Upload the coverage profile and run a weekly cold-cache build in CI.
 - [ ] Optional: `doctor --json` for scripting and `fix --dry-run` for CI use.
 
 ## 6. Verification performed
