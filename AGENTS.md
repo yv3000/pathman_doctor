@@ -28,7 +28,9 @@ go run . doctor
 CI (`.github/workflows/ci.yml`) runs build, vet, the coverage gate,
 golangci-lint and govulncheck (pinned to v1.9.0) on `windows-latest` for every
 push and pull request to `main`. The gate fails when `cmd` or `internal` drops
-below 80% statement coverage or the module total drops below 80%.
+below 80% statement coverage or the module total drops below 80%, and the
+profile is uploaded as the `coverage` artifact. A Monday schedule repeats the
+jobs with the Go module cache disabled, so a cold clone is tested too.
 
 ## Environment guardrails (this workstation)
 
@@ -57,7 +59,8 @@ cmd/doctor.go            scan and report
 cmd/fix.go               flag parsing, plan, confirmation, backup, write
 cmd/uninstall.go         local removal of the User PATH entry and files
 internal/path.go         pure expansion, parsing, analysis and planning
-internal/validate.go     the single rule for a user-supplied PATH entry
+internal/validate.go     the single rule for a user-supplied PATH entry or --only value
+internal/log.go          leveled INFO/WARN/ERROR diagnostics
 internal/registry.go     registry read/write, scope mapping, WM_SETTINGCHANGE
 internal/backup.go       raw PATH snapshots before a write
 internal/store.go        Store interface + RegistryStore
@@ -82,6 +85,10 @@ usage. `main` is the only place that calls `os.Exit`.
   percent syntax and previously marked `%SystemRoot%\system32` as dead.
 - Compare PATH entries with `internal.Normalize` (case-insensitive, cleaned).
   Do not re-introduce raw string comparisons.
+- Validate flags with `internal.ValidateEntry` and `internal.ValidateOnlyFlag`
+  instead of adding rules to `cmd`. Diagnostics go through `internal.Logf` and
+  `App.Log` (opt-in with `PATHMAN_LOG=1`); do not write them to `Out`, which is
+  the colored console stream.
 - Every behaviour change ships with its tests in the same commit. Keep commits
   focused and use conventional prefixes (`fix:`, `feat(scope):`, `test:`,
   `ci:`, `docs:`, `chore:`).

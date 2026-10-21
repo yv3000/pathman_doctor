@@ -51,7 +51,10 @@ to `main`. All three jobs (`build-test`, `lint`, `vulncheck`) must be green.
 - Prefer the standard library. The CLI intentionally has two direct
   dependencies (`fatih/color` and `golang.org/x/sys`); justify any new one.
 - Keep command output readable in a plain terminal and respect `NO_COLOR` via
-  `fatih/color`.
+  `fatih/color`. Diagnostics belong in `App.Log` through `internal.Logf`, not in
+  the colored console stream.
+- Validate flag values with `internal.ValidateEntry` and
+  `internal.ValidateOnlyFlag`; do not add validation rules to `cmd`.
 - Back up both PATH scopes before a write and never write a scope that could not
   be read.
 
@@ -83,3 +86,5 @@ enforce.
 2. Tag the commit as `vX.Y.Z` and push the tag.
 3. The release workflow runs the tests, builds AMD64 and ARM64 binaries with the
    tag stamped into `main.version`, and attaches them to the GitHub release.
+4. Publish the release with the changelog section as its notes, so the tag
+   history explains what changed without reading the diff.
