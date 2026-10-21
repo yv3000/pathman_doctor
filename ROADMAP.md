@@ -162,9 +162,13 @@ detectable and it is not the behaviour the score is meant to reward.
 |---|---|---|
 | Build | `go build ./...` | passes |
 | Vet | `go vet ./...` | passes |
-| Tests | `go test ./... -cover` | passes; `cmd` 86.0%, `internal` 89.4%, `main` 33.3% |
-| Coverage gate | `./scripts/coverage-gate.ps1` | passes; total 87.0%, floors 80/80/80 |
+| Tests | `go test ./... -cover` | passes; `cmd` 88.6%, `internal` 91.4%, `main` 33.3% |
+| Coverage gate | `./scripts/coverage-gate.ps1` | passes; total 89.4%, floors 80/80/80 |
 | Negative gate check | `./scripts/coverage-gate.ps1 -MinimumPackage 95` | exits 1 with both packages listed |
+| Coverage artifact | GitHub API on run 39606984385 | `coverage` artifact (2.4 KB) attached |
+| Cold clone | `gh workflow run ci.yml` (run 39606984385) | `cache: false`, 10 modules downloaded, build/vet/gate/lint/vulncheck all pass |
+| Diagnostics | `PATHMAN_LOG=1 go run . --version` | stderr gets `[INFO] pathman v1.3.0`, stdout unchanged |
+| Source version | `go run . --version` | `pathman v1.3.0` |
 | Fresh profile | `LOCALAPPDATA=<empty temp> go test ./... -cover` | passes; the live registry test skips, so no pre-existing PATH or backup state is needed |
 | Vulnerability scan | `govulncheck v1.9.0 ./...` | 0 vulnerabilities reachable |
 | Lint | `golangci-lint run` (v2.15.0) | 0 issues |
@@ -175,7 +179,7 @@ detectable and it is not the behaviour the score is meant to reward.
 | Flag validation | `pathman fix --only bogus` | exit 2, usage printed, no write |
 | Installer scripts | PowerShell `Parser::ParseFile` | `install.ps1` and `uninstall.ps1` parse cleanly |
 | Release version stamp | `go build -ldflags="-X main.version=v9.8.7"` | `pathman --version` prints `v9.8.7` |
-| Remote CI | GitHub Actions run 39101743236 | build/vet/test, lint and vulncheck all pass |
+| Remote CI | GitHub runs 39607449253 (push) and 39606984385 (cold dispatch) | all three jobs pass in both |
 | Branch protection | GitHub API | required checks configured on `main` |
 | Dependency PRs | Dependabot #1–#5 | rebased, green, merged |
 | Release pipeline | tags `v1.2.0`, `v1.2.1`, `v1.2.2` | tests ran, amd64/arm64 assets uploaded, `--version` reports the tag |
@@ -184,7 +188,8 @@ detectable and it is not the behaviour the score is meant to reward.
 | Deferred cleanup | same command string run directly with `cmd /c` | deletes the folder; the agent sandbox kills detached children, so the scheduled run is verified by unit tests plus the direct invocation |
 | Installer | `install.ps1` via `irm \| iex` | downloaded v1.2.2 to `~\.pathman\bin`, added the User PATH entry, binary reports `pathman v1.2.2` |
 
-Coverage percentages are from the last local run; CI records them on every push.
+Coverage percentages are from the last local run; CI records them on every push
+and uploads the profile as an artifact.
 
 Remote checks are now verified as well: CI passed on `main`, the three jobs are
 required by branch protection, and the release workflow published v1.2.0 and
