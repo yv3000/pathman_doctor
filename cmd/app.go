@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/fatih/color"
@@ -30,6 +31,10 @@ type App struct {
 	Out     io.Writer
 	Version string
 
+	// Log receives leveled diagnostics. It is io.Discard unless PATHMAN_LOG is
+	// set, so the console keeps a single, human-oriented stream.
+	Log io.Writer
+
 	// BackupDir is where PATH is snapshotted before a write.
 	BackupDir string
 	// Executable, RemoveAll and ScheduleRemoval are seams for uninstall.
@@ -45,6 +50,7 @@ func NewApp(store internal.Store, in io.Reader, out io.Writer, version string) A
 		In:              in,
 		Out:             out,
 		Version:         version,
+		Log:             diagnosticSink(),
 		BackupDir:       internal.DefaultBackupDir(),
 		Executable:      defaultExecutable,
 		RemoveAll:       defaultRemoveAll,
@@ -96,15 +102,33 @@ Exit codes: 0 success, 1 incomplete or failed, 2 invalid usage.`)
 }
 
 func (a App) printf(format string, args ...any) {
+	if strings.TrimSpace(format) != "" {
+		a.logf(internal.LevelInfo, format, args...)
+	}
 	_, _ = fmt.Fprintf(a.Out, format+"\n", args...)
 }
 
 func (a App) warnf(format string, args ...any) {
+	a.logf(internal.LevelWarn, format, args...)
 	_, _ = yellow.Fprintf(a.Out, "⚠️  "+format+"\n", args...)
 }
 
 func (a App) errorf(format string, args ...any) {
+	a.logf(internal.LevelError, format, args...)
 	_, _ = red.Fprintf(a.Out, "❌ "+format+"\n", args...)
+}
+
+func (a App) logf(level internal.Level, format string, args ...any) {
+	internal.Logf(a.Log, level, format, args...)
+}
+
+// diagnosticSink keeps normal runs quiet: diagnostics go to stderr only when
+// PATHMAN_LOG is set, which is when someone is collecting them for a report.
+func diagnosticSink() io.Writer {
+	if os.Getenv("PATHMAN_LOG") == "" {
+		return io.Discard
+	}
+	return os.Stderr
 }
 
 func (a App) confirm(prompt string) bool {
@@ -117,6 +141,7 @@ func (a App) confirm(prompt string) bool {
 }
 
 func (a App) successf(format string, args ...any) {
+	a.logf(internal.LevelInfo, format, args...)
 	_, _ = green.Fprintf(a.Out, "✅ "+format+"\n", args...)
 }
 
